@@ -3,7 +3,6 @@ package models_test
 import (
 	"testing"
 
-	"github.com/elliotchance/orderedmap/v2"
 	"github.com/google/uuid"
 	"github.com/satrap-illustrations/zs/internal/models"
 	"gotest.tools/v3/assert"
@@ -240,12 +239,4 @@ func TestValueAt(t *testing.T) {
 			assert.DeepEqual(t, tc.expectedValue, value)
 		})
 	}
-}
-
-func toMap(o *orderedmap.OrderedMap[string, int]) map[string]bool {
-	m := make(map[string]bool)
-	for _, k := range o.Keys() {
-		m[k] = true
-	}
-	return m
 }

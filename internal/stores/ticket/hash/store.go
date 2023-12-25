@@ -42,7 +42,7 @@ func (s TicketStore) Search(field, query string) ([]models.Ticket, error) {
 
 	out := []models.Ticket{}
 	for _, ticket := range s {
-		if ticket.ValueAtIdx(i) == query {
+		if models.ValueContains(ticket.ValueAtIdx(i), query) {
 			out = append(out, ticket)
 		}
 	}

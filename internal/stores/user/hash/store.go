@@ -24,7 +24,7 @@ func (UserStore) ListFields() []string {
 }
 
 func (s UserStore) Search(field, query string) ([]models.User, error) {
-	i, exists := new(models.Ticket).Fields().Get(field)
+	i, exists := new(models.User).Fields().Get(field)
 	if !exists {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidField, field)
 	}
@@ -42,7 +42,7 @@ func (s UserStore) Search(field, query string) ([]models.User, error) {
 
 	out := []models.User{}
 	for _, user := range s {
-		if user.ValueAtIdx(i) == query {
+		if models.ValueContains(user.ValueAtIdx(i), query) {
 			out = append(out, user)
 		}
 	}
