@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/satrap-illustrations/zs/internal/models"
@@ -25,42 +26,55 @@ const (
 )
 
 type model struct {
-	state            state
-	styles           *styles
-	width, height    int
-	docType          doctypelist.Model
-	field, query     textinput.Model
-	formattedResults string
-	resultsErr       error
-	store            stores.Store
+	state         state
+	styles        *styles
+	width, height int
+	docType       doctypelist.Model
+	field, query  textinput.Model
+	resultsErr    error
+	store         stores.Store
+	veiwport      viewport.Model
 }
 
 type styles struct {
-	docTypeField lipgloss.Style
-	fieldField   lipgloss.Style
-	queryField   lipgloss.Style
+	docType, field, query, fieldsList, results lipgloss.Style
 }
 
 func DefaultStyles() *styles {
 	return &styles{
-		docTypeField: lipgloss.
+		docType: lipgloss.
 			NewStyle().
 			BorderForeground(lipgloss.Color("#154733")).
 			BorderStyle(lipgloss.RoundedBorder()).
 			Padding(1).
+			Margin(0, 0, 1, 0).
 			Width(80),
-		fieldField: lipgloss.
+		field: lipgloss.
 			NewStyle().
 			BorderForeground(lipgloss.Color("#ed095d")).
 			BorderStyle(lipgloss.RoundedBorder()).
 			Padding(1).
+			Margin(0, 0, 1, 0).
 			Width(80),
-		queryField: lipgloss.
+		query: lipgloss.
 			NewStyle().
 			BorderForeground(lipgloss.Color("#a134eb")).
 			BorderStyle(lipgloss.RoundedBorder()).
 			Padding(1).
+			Margin(0, 0, 1, 0).
 			Width(80),
+		results: lipgloss.
+			NewStyle().
+			Padding(0, 1).
+			Margin(0, 0, 1, 0).
+			BorderForeground(lipgloss.Color("#a134eb")).
+			BorderStyle(lipgloss.RoundedBorder()),
+		fieldsList: lipgloss.
+			NewStyle().
+			Padding(0, 1).
+			Margin(0, 0, 1, 0).
+			BorderForeground(lipgloss.Color("#a134eb")).
+			BorderStyle(lipgloss.RoundedBorder()),
 	}
 }
 
@@ -71,12 +85,14 @@ func InitialModel(store stores.Store) model {
 	field := textinput.New()
 	query := textinput.New()
 	query.ShowSuggestions = true
+
 	return model{
-		styles:  styles,
-		docType: docType,
-		field:   field,
-		query:   query,
-		store:   store,
+		styles:   styles,
+		docType:  docType,
+		field:    field,
+		query:    query,
+		store:    store,
+		veiwport: viewport.New(0, 0),
 	}
 }
 
@@ -86,15 +102,15 @@ func (model) Init() tea.Cmd {
 
 func (m model) Clear() (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
-	cmds := make([]tea.Cmd, 0, 3)
+	cmds := make([]tea.Cmd, 0, 4)
 	m.docType, cmd = m.docType.Update("")
 	cmds = append(cmds, cmd)
 	m.query, cmd = m.query.Update("")
 	cmds = append(cmds, cmd)
 	m.field, cmd = m.field.Update("")
 	cmds = append(cmds, cmd)
+	m.veiwport.SetContent("")
 
-	m.formattedResults = ""
 	m.resultsErr = nil
 
 	return m, tea.Batch(cmds...)
@@ -109,6 +125,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 
+		m.veiwport.Width = m.width - 2
+		switch m.state {
+		case listFields, header, selectOptions, search, chosenDocType, chosenDocTypeField:
+			m.veiwport.Height = m.height - 4
+		case results:
+			m.veiwport.Height = m.height - 5
+		}
+
+		return m, nil
 	case tea.KeyMsg:
 		switch s := msg.String(); s {
 		// ctrl+c should exit the program from any state.
@@ -131,6 +156,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.state = search
 				case "2":
 					m.state = listFields
+					m.veiwport.Height = m.height - 5
+					m.veiwport.SetContent(formatFieldsList(m.store.ListFields(), m.veiwport.Width))
 				}
 				return m, nil
 			case search:
@@ -186,13 +213,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return m, nil
 					}
 
-					m.formattedResults, err = formatResults(resultDocs)
+					formattedResults, err := formatResults(resultDocs)
 					if err != nil {
 						m.state = results
 						m.resultsErr = err
 						return m, nil
 					}
 
+					m.veiwport.Height = m.height - 5
+					m.veiwport.SetContent(formattedResults)
 					m.state = results
 					return m, nil
 				default:
@@ -211,15 +240,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				switch s {
 				case "enter":
 					m.state = selectOptions
-					return m, nil
+					return m.Clear()
 				default:
-					return m, nil
+					m.veiwport, cmd = m.veiwport.Update(msg)
+					return m, cmd
 				}
 			}
 		}
 	}
 
-	m.query, cmd = m.query.Update(msg)
 	return m, cmd
 }
 
@@ -274,24 +303,21 @@ Select search options:
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
 			headerText,
-			m.styles.docTypeField.Render(m.docType.View()),
-			"",
+			m.styles.docType.Render(m.docType.View()),
 		)
 	case chosenDocType:
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
 			headerText,
 			fmt.Sprintf("\nSearching %s documents", m.docType.SelectedItem()),
-			m.styles.fieldField.Render(m.field.View()),
-			"",
+			m.styles.field.Render(m.field.View()),
 		)
 	case chosenDocTypeField:
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
 			headerText,
 			fmt.Sprintf("\nSearching the %s field in %s documents", m.field.Value(), m.docType.SelectedItem()),
-			m.styles.queryField.Render(m.query.View()),
-			"",
+			m.styles.query.Render(m.query.View()),
 		)
 	case results:
 		if m.resultsErr != nil {
@@ -305,16 +331,15 @@ Select search options:
 		}
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
-			headerText,
-			"\nFound the following documents:",
-			m.formattedResults,
+			"Found the following documents:",
 			"Press 'enter' to go back to the main menu.",
+			m.styles.results.Render(m.veiwport.View()),
 		)
 	case listFields:
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
 			"Press 'enter' to go back to the main menu.",
-			formatFieldsList(m.store.ListFields(), m.width),
+			m.styles.fieldsList.Render(m.veiwport.View()),
 		)
 	default:
 		return "Unknown state"
