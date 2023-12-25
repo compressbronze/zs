@@ -33,13 +33,12 @@ type Styles struct {
 func DefaultStyles() *Styles {
 	s := &Styles{}
 	s.BorderColor = lipgloss.Color("#a134eb")
-	s.InputField =
-		lipgloss.
-			NewStyle().
-			BorderForeground(s.BorderColor).
-			BorderStyle(lipgloss.RoundedBorder()).
-			Padding(1).
-			Width(50)
+	s.InputField = lipgloss.
+		NewStyle().
+		BorderForeground(s.BorderColor).
+		BorderStyle(lipgloss.RoundedBorder()).
+		Padding(1).
+		Width(50)
 	return s
 }
 
@@ -54,55 +53,55 @@ func InitialModel() model {
 	}
 }
 
-func (m model) Init() tea.Cmd {
+func (model) Init() tea.Cmd {
 	return nil
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
+	newModel := m
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.width = msg.Width
-		m.height = msg.Height
+		newModel.width = msg.Width
+		newModel.height = msg.Height
 
 	case tea.KeyMsg:
 		switch msg.String() {
-
 		// These keys should exit the program.
 		case "ctrl+c", "ctrl+d":
-			return m, tea.Quit
+			return newModel, tea.Quit
 
 		default:
-			switch m.state {
+			switch newModel.state {
 			case header:
-				switch msg.String() {
-				case "enter":
-					m.state = selectOptions
+				if msg.String() == "enter" {
+					newModel.state = selectOptions
 				}
-				return m, nil
+				return newModel, nil
 			case selectOptions:
 				switch msg.String() {
 				case "1":
-					m.state = searchZendesk
+					newModel.state = searchZendesk
 				case "2":
-					m.state = list
+					newModel.state = list
 				}
-				return m, nil
+				return newModel, nil
 			case searchZendesk:
-				m.query, cmd = m.query.Update(msg)
-				return m, cmd
+				newModel.query, cmd = newModel.query.Update(msg)
+				return newModel, cmd
 			case searchZendeskChosenType:
-				m.query, cmd = m.query.Update(msg)
-				return m, cmd
+				newModel.query, cmd = newModel.query.Update(msg)
+				return newModel, cmd
 			case list:
-				m.query, cmd = m.query.Update(msg)
-				return m, cmd
+				newModel.query, cmd = newModel.query.Update(msg)
+				return newModel, cmd
 			}
 		}
 	}
 
-	m.query, cmd = m.query.Update(msg)
-	return m, cmd
+	newModel.query, cmd = newModel.query.Update(msg)
+	return newModel, cmd
 }
 
 func (m model) View() string {
