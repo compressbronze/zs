@@ -17,14 +17,14 @@ type Ticket struct {
 	Subject        string    `json:"subject"`
 	Description    string    `json:"description"`
 	Priority       string    `json:"priority"`
-	Status         string    `json:"pending"`
+	Status         string    `json:"status"`
 	SubmitterId    int       `json:"submitter_id"`
 	AssigneeId     int       `json:"assignee_id"`
 	OrganizationId int       `json:"organization_id"`
 	Tags           []string  `json:"tags"`
 	HasIncidents   bool      `json:"has_incidents"`
 	DueAt          string    `json:"due_at"`
-	Via            string    `json:"web"`
+	Via            string    `json:"via"`
 }
 
 func (t *Ticket) Fields() map[string]bool {

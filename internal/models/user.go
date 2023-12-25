@@ -25,7 +25,7 @@ type User struct {
 	OrganizationId int      `json:"organization_id"`
 	Tags           []string `json:"tags"`
 	Suspended      bool     `json:"suspended"`
-	Role           string   `json:"admin"`
+	Role           string   `json:"role"`
 }
 
 func (u *User) Fields() map[string]bool {
