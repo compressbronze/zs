@@ -8,7 +8,7 @@ import (
 
 var ErrFieldNotFound = fmt.Errorf("field not found")
 
-type Fielder interface {
+type Model interface {
 	// Fields returns a set of the fields in the Fielder.
 	Fields() map[string]bool
 
@@ -22,7 +22,7 @@ type Fielder interface {
 }
 
 // StringOf returns a string representation of the Fielder.
-func StringOf(t Fielder) (string, error) {
+func StringOf(t Model) (string, error) {
 	var out strings.Builder
 	for field := range t.Fields() {
 		value := t.UnsafeValueAt(field)
@@ -36,7 +36,7 @@ func StringOf(t Fielder) (string, error) {
 }
 
 // FieldSlice returns a slice of the fields in the Fielder.
-func FieldSlice(t Fielder) []string {
+func FieldSlice(t Model) []string {
 	fieldSet := t.Fields()
 	fieldSlice := make([]string, 0, len(fieldSet))
 	for field := range fieldSet {

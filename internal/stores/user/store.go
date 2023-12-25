@@ -1,8 +1,8 @@
-package userstore
+package user
 
 import "github.com/satrap-illustrations/zs/internal/models"
 
-type UserStore interface {
+type Store interface {
 	ListFields() []string
 	Search(field, query string) ([]models.User, error)
 }
