@@ -1,6 +1,8 @@
 package ticketstore
 
-import "github.com/satrap-illustrations/zs/internal/models"
+import (
+	"github.com/satrap-illustrations/zs/internal/models"
+)
 
 type TicketStore interface {
 	ListFields() []string

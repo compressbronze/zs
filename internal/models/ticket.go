@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -27,20 +28,43 @@ type Ticket struct {
 	Data           map[string]any `json:"-"`
 }
 
-// Fields returns the fields in the Ticket.
-func (t *Ticket) Fields() []string {
+func (t *Ticket) Fields() map[string]bool {
+	if t == nil {
+		t = &Ticket{}
+	}
 	ty := reflect.TypeOf(*t)
-	fields := make([]string, 0, ty.NumField())
+	fields := make(map[string]bool, ty.NumField())
 	for i := 0; i < ty.NumField(); i++ {
 		parts := strings.SplitN(ty.Field(i).Tag.Get("json"), ",", 2)
 		if parts[0] == "-" {
 			continue
 		}
-		fields = append(fields, parts[0])
+		fields[parts[0]] = true
 	}
 	return fields
 }
 
+func (t *Ticket) UnsafeValueAt(field string) any {
+	if t == nil {
+		t = &Ticket{}
+	}
+	reflectedValue := reflect.ValueOf(*t)
+	return reflect.Indirect(reflectedValue).FieldByName(field)
+}
+
+func (t *Ticket) ValueAt(field string) (any, error) {
+	if t == nil {
+		t = &Ticket{}
+	}
+	if _, exists := t.Fields()[field]; !exists {
+		return nil, fmt.Errorf("%w: %s", ErrFieldNotFound, field)
+	}
+	return t.UnsafeValueAt(field), nil
+}
+
 func (t *Ticket) String() (string, error) {
+	if t == nil {
+		t = &Ticket{}
+	}
 	return StringOf(t)
 }

@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 )
@@ -27,20 +28,43 @@ type User struct {
 	Role           string   `json:"admin"`
 }
 
-// Fields returns the fields in the Ticket.
-func (u *User) Fields() []string {
+func (u *User) Fields() map[string]bool {
+	if u == nil {
+		u = &User{}
+	}
 	ty := reflect.TypeOf(*u)
-	fields := make([]string, 0, ty.NumField())
+	fields := make(map[string]bool, ty.NumField())
 	for i := 0; i < ty.NumField(); i++ {
 		parts := strings.SplitN(ty.Field(i).Tag.Get("json"), ",", 2)
 		if parts[0] == "-" {
 			continue
 		}
-		fields = append(fields, parts[0])
+		fields[parts[0]] = true
 	}
 	return fields
 }
 
+func (u *User) UnsafeValueAt(field string) any {
+	if u == nil {
+		u = &User{}
+	}
+	reflectedValue := reflect.ValueOf(*u)
+	return reflect.Indirect(reflectedValue).FieldByName(field)
+}
+
+func (u *User) ValueAt(field string) (any, error) {
+	if u == nil {
+		u = &User{}
+	}
+	if _, exists := u.Fields()[field]; !exists {
+		return nil, fmt.Errorf("%w: %s", ErrFieldNotFound, field)
+	}
+	return u.UnsafeValueAt(field), nil
+}
+
 func (u *User) String() (string, error) {
+	if u == nil {
+		u = &User{}
+	}
 	return StringOf(u)
 }
