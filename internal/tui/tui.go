@@ -342,7 +342,7 @@ Select search options:
 				return lipgloss.JoinVertical(
 					lipgloss.Left,
 					headerText,
-					"\nError searching for documents:",
+					"Error searching for documents:",
 					m.resultsErr.Error(),
 					"Press 'enter' to go back to the main menu.",
 				)
