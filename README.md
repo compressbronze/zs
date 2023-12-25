@@ -26,11 +26,11 @@ Usage:
   zs [flags]
 
 Flags:
-      --config string     config file (default is $HOME/.config/zs/config.yaml)
-  -d, --data-dir string   data directory (default "./data")
-  -h, --help              help for zs
-  -v, --verbose           verbose output
-      --version           version for zs
+      --config string       config file (default is $HOME/.config/zs/config.yaml)
+  -d, --data-dir string     data directory (default "./data")
+      --debug-file string   debug log file
+  -h, --help                help for zs
+  -v, --version             version for zs
 ```
 This launches a terminal user interface (tui) that explains the available features.
 
