@@ -25,17 +25,6 @@ const (
 	listFields
 )
 
-type model struct {
-	state         state
-	styles        *styles
-	width, height int
-	docType       doctypelist.Model
-	field, query  textinput.Model
-	resultsErr    error
-	store         stores.Store
-	veiwport      viewport.Model
-}
-
 type styles struct {
 	docType, field, query, fieldsList, results lipgloss.Style
 }
@@ -47,35 +36,42 @@ func DefaultStyles() *styles {
 			BorderForeground(lipgloss.Color("#154733")).
 			BorderStyle(lipgloss.RoundedBorder()).
 			Padding(1).
-			Margin(0, 0, 1, 0).
 			Width(80),
 		field: lipgloss.
 			NewStyle().
 			BorderForeground(lipgloss.Color("#ed095d")).
 			BorderStyle(lipgloss.RoundedBorder()).
 			Padding(1).
-			Margin(0, 0, 1, 0).
 			Width(80),
 		query: lipgloss.
 			NewStyle().
 			BorderForeground(lipgloss.Color("#a134eb")).
 			BorderStyle(lipgloss.RoundedBorder()).
 			Padding(1).
-			Margin(0, 0, 1, 0).
 			Width(80),
 		results: lipgloss.
 			NewStyle().
 			Padding(0, 1).
-			Margin(0, 0, 1, 0).
 			BorderForeground(lipgloss.Color("#a134eb")).
 			BorderStyle(lipgloss.RoundedBorder()),
 		fieldsList: lipgloss.
 			NewStyle().
 			Padding(0, 1).
-			Margin(0, 0, 1, 0).
 			BorderForeground(lipgloss.Color("#ed095d")).
 			BorderStyle(lipgloss.RoundedBorder()),
 	}
+}
+
+type model struct {
+	state         state
+	styles        *styles
+	width, height int
+	docType       doctypelist.Model
+	field, query  textinput.Model
+	resultsErr    error
+	store         stores.Store
+	veiwport      viewport.Model
+	quitting      bool
 }
 
 func InitialModel(store stores.Store) model {
@@ -133,6 +129,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch s := msg.String(); s {
 		// ctrl+c should exit the program from any state.
 		case "ctrl+c":
+			m.quitting = true
 			return m, tea.Quit
 
 		default:
@@ -289,60 +286,69 @@ Select search options:
 2) View a list of searchable fields
 `
 
-	switch m.state {
-	case header:
-		return headerText
-	case selectOptions:
-		return lipgloss.JoinVertical(
-			lipgloss.Left,
-			headerText,
-			searchText,
-		)
-	case search:
-		return lipgloss.JoinVertical(
-			lipgloss.Left,
-			headerText,
-			m.styles.docType.Render(m.docType.View()),
-		)
-	case chosenDocType:
-		return lipgloss.JoinVertical(
-			lipgloss.Left,
-			headerText,
-			fmt.Sprintf("\nSearching %s documents", m.docType.SelectedItem()),
-			m.styles.field.Render(m.field.View()),
-		)
-	case chosenDocTypeField:
-		return lipgloss.JoinVertical(
-			lipgloss.Left,
-			headerText,
-			fmt.Sprintf("\nSearching the %s field in %s documents", m.field.Value(), m.docType.SelectedItem()),
-			m.styles.query.Render(m.query.View()),
-		)
-	case results:
-		if m.resultsErr != nil {
+	s := func() string {
+		switch m.state {
+		case header:
+			return headerText
+		case selectOptions:
 			return lipgloss.JoinVertical(
 				lipgloss.Left,
 				headerText,
-				"\nError searching for documents:",
-				m.resultsErr.Error(),
-				"Press 'enter' to go back to the main menu.",
+				searchText,
 			)
+		case search:
+			return lipgloss.JoinVertical(
+				lipgloss.Left,
+				headerText,
+				m.styles.docType.Render(m.docType.View()),
+			)
+		case chosenDocType:
+			return lipgloss.JoinVertical(
+				lipgloss.Left,
+				headerText,
+				fmt.Sprintf("\nSearching %s documents", m.docType.SelectedItem()),
+				m.styles.field.Render(m.field.View()),
+			)
+		case chosenDocTypeField:
+			return lipgloss.JoinVertical(
+				lipgloss.Left,
+				headerText,
+				fmt.Sprintf("\nSearching the %s field in %s documents", m.field.Value(), m.docType.SelectedItem()),
+				m.styles.query.Render(m.query.View()),
+			)
+		case results:
+			if m.resultsErr != nil {
+				return lipgloss.JoinVertical(
+					lipgloss.Left,
+					headerText,
+					"\nError searching for documents:",
+					m.resultsErr.Error(),
+					"Press 'enter' to go back to the main menu.",
+				)
+			}
+			return lipgloss.JoinVertical(
+				lipgloss.Left,
+				"Found the following documents:",
+				"Press 'enter' to go back to the main menu.",
+				m.styles.results.Render(m.veiwport.View()),
+			)
+		case listFields:
+			return lipgloss.JoinVertical(
+				lipgloss.Left,
+				"Press 'enter' to go back to the main menu.",
+				m.styles.fieldsList.Render(m.veiwport.View()),
+			)
+		default:
+			return "Unknown state"
 		}
-		return lipgloss.JoinVertical(
-			lipgloss.Left,
-			"Found the following documents:",
-			"Press 'enter' to go back to the main menu.",
-			m.styles.results.Render(m.veiwport.View()),
-		)
-	case listFields:
-		return lipgloss.JoinVertical(
-			lipgloss.Left,
-			"Press 'enter' to go back to the main menu.",
-			m.styles.fieldsList.Render(m.veiwport.View()),
-		)
-	default:
-		return "Unknown state"
+	}()
+
+	// So that the prompt does no overwrite the last line.
+	// See https://github.com/charmbracelet/bubbletea/issues/304
+	if m.quitting {
+		return s + "\n"
 	}
+	return s
 }
 
 func formatResults(results []models.Model, width int) (string, error) {
