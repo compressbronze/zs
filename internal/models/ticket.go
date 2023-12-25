@@ -32,6 +32,13 @@ func (*Ticket) DocumentType() string {
 	return "Ticket"
 }
 
+func (t *Ticket) StringID() string {
+	if t == nil {
+		t = &Ticket{}
+	}
+	return t.ID.String()
+}
+
 func (t *Ticket) Fields() *orderedmap.OrderedMap[string, int] {
 	if t == nil {
 		t = &Ticket{}
@@ -70,6 +77,19 @@ func (t *Ticket) ValueAt(field string) (any, error) {
 		return t.ValueAtIdx(i), nil
 	}
 	return nil, fmt.Errorf("%w: %s", ErrFieldNotFound, field)
+}
+
+func (*Ticket) Contains() []ContainedModel {
+	return []ContainedModel{
+		{
+			Model: &User{},
+			Field: "submitter_id",
+		},
+		{
+			Model: &User{},
+			Field: "assignee_id",
+		},
+	}
 }
 
 func (t *Ticket) String() (string, error) {

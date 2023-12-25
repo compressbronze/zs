@@ -7,7 +7,7 @@ import (
 	"github.com/satrap-illustrations/zs/internal/models"
 )
 
-var ErrInvalidField = fmt.Errorf("invalid field")
+var ErrInvalidField = fmt.Errorf("invalid field for user store")
 
 type UserStore map[int]models.User
 

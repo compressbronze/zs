@@ -70,17 +70,58 @@ func (h *HashStore) ListFields() map[string][]string {
 }
 
 func (h *HashStore) Search(doctype, field, query string) ([]models.Model, error) {
+	sameTypeModels := []models.Model{}
 	switch doctype {
 	case "Organizations":
 		organizations, err := h.organizationStore.Search(field, query)
-		return models.OrganizationSliceToModelsSlice(organizations), err
+		if err != nil {
+			return nil, err
+		}
+		sameTypeModels = append(sameTypeModels, models.OrganizationSliceToModelsSlice(organizations)...)
 	case "Tickets":
 		tickets, err := h.ticketStore.Search(field, query)
-		return models.TicketSliceToModelsSlice(tickets), err
+		if err != nil {
+			return nil, err
+		}
+		sameTypeModels = append(sameTypeModels, models.TicketSliceToModelsSlice(tickets)...)
 	case "Users":
 		users, err := h.userStore.Search(field, query)
-		return models.UserSliceToModelsSlice(users), err
+		if err != nil {
+			return nil, err
+		}
+		sameTypeModels = append(sameTypeModels, models.UserSliceToModelsSlice(users)...)
 	default:
 		return nil, ErrInvalidDocType
 	}
+	return h.augmentWithRelatedDocuments(sameTypeModels)
+}
+
+func (h *HashStore) augmentWithRelatedDocuments(in []models.Model) ([]models.Model, error) {
+	out := make([]models.Model, 0, len(in))
+	for _, m := range in {
+		out = append(out, m)
+		for _, c := range m.Contains() {
+			switch c.Model.(type) {
+			case *models.Organization:
+				organizations, err := h.organizationStore.Search(c.Field, m.StringID())
+				if err != nil {
+					return nil, err
+				}
+				out = append(out, models.OrganizationSliceToModelsSlice(organizations)...)
+			case *models.Ticket:
+				tickets, err := h.ticketStore.Search(c.Field, m.StringID())
+				if err != nil {
+					return nil, err
+				}
+				out = append(out, models.TicketSliceToModelsSlice(tickets)...)
+			case *models.User:
+				users, err := h.userStore.Search(c.Field, m.StringID())
+				if err != nil {
+					return nil, err
+				}
+				out = append(out, models.UserSliceToModelsSlice(users)...)
+			}
+		}
+	}
+	return out, nil
 }

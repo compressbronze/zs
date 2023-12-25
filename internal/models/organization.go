@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/elliotchance/orderedmap/v2"
@@ -23,6 +24,13 @@ type Organization struct {
 
 func (*Organization) DocumentType() string {
 	return "Organization"
+}
+
+func (o *Organization) StringID() string {
+	if o == nil {
+		o = &Organization{}
+	}
+	return strconv.Itoa(o.ID)
 }
 
 func (o *Organization) Fields() *orderedmap.OrderedMap[string, int] {
@@ -70,6 +78,19 @@ func (o *Organization) String() (string, error) {
 		o = &Organization{}
 	}
 	return StringOf(o)
+}
+
+func (*Organization) Contains() []ContainedModel {
+	return []ContainedModel{
+		{
+			Model: &Ticket{},
+			Field: "organization_id",
+		},
+		{
+			Model: &User{},
+			Field: "organization_id",
+		},
+	}
 }
 
 // OrganizationSliceToModelsSlice converts a slice of Organization to a slice of Model.

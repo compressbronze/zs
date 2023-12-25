@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/elliotchance/orderedmap/v2"
@@ -33,6 +34,13 @@ type User struct {
 
 func (*User) DocumentType() string {
 	return "User"
+}
+
+func (u *User) StringID() string {
+	if u == nil {
+		u = &User{}
+	}
+	return strconv.Itoa(u.ID)
 }
 
 func (u *User) Fields() *orderedmap.OrderedMap[string, int] {
@@ -73,6 +81,10 @@ func (u *User) ValueAt(field string) (any, error) {
 		return u.ValueAtIdx(i), nil
 	}
 	return nil, fmt.Errorf("%w: %s", ErrFieldNotFound, field)
+}
+
+func (*User) Contains() []ContainedModel {
+	return []ContainedModel{}
 }
 
 func (u *User) String() (string, error) {

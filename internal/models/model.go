@@ -13,7 +13,15 @@ import (
 
 var ErrFieldNotFound = fmt.Errorf("field not found")
 
+type ContainedModel struct {
+	Model Model
+	Field string
+}
+
 type Model interface {
+	// StringID is the unique identifier of the Model as a string.
+	StringID() string
+
 	// DocumentType returns a string representation of the type of the Model.
 	DocumentType() string
 
@@ -26,6 +34,9 @@ type Model interface {
 	// ValueAt returns the value of the field in the Model.
 	// It returns ErrFieldNotFound if the field does not exist.
 	ValueAt(field string) (any, error)
+
+	// Contains returns a slice of ContainedModels that the Model contains.
+	Contains() []ContainedModel
 }
 
 // StringOf returns a string representation of the Model.
