@@ -23,6 +23,7 @@ func (*HashStore) ListDocumentTypes() []string {
 	return []string{"Organizations", "Tickets", "Users"}
 }
 
+// Deprecated: Use NewInvertedStore instead.
 func NewHashStore(path string) (*HashStore, error) {
 	organizations := []models.Organization{}
 	if err := readJSONFile(filepath.Join(path, "organizations.json"), &organizations); err != nil {

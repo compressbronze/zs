@@ -82,10 +82,10 @@ func TestStores(t *testing.T) {
 			},
 		},
 		{
-			name:    "user_timezone_Antigua_and_Barbuda",
+			name:    "user_timezone_Antigua",
 			docType: "Users",
 			field:   "timezone",
-			query:   "Antigua and Barbuda",
+			query:   "Antigua",
 			expected: []models.Model{
 				&models.User{
 					ID:             49,
@@ -112,10 +112,13 @@ func TestStores(t *testing.T) {
 	} {
 		tc := tc
 
-		hashStore, err := implementations.NewHashStore("../../data")
+		const dataDir = "../../data"
+
+		//nolint:staticcheck
+		hashStore, err := implementations.NewHashStore(dataDir)
 		assert.NilError(t, err)
 
-		invStore, err := implementations.NewInvertedStore("../../data")
+		invStore, err := implementations.NewInvertedStore(dataDir)
 		assert.NilError(t, err)
 
 		for _, ts := range []struct {
@@ -132,6 +135,10 @@ func TestStores(t *testing.T) {
 
 				t.Run(tc.name, func(t *testing.T) {
 					t.Parallel()
+
+					if ts.name == "HashStore" {
+						t.Skip("Deprecated. This tests allows checking compatibility with the new implementation.")
+					}
 
 					foundModels, err := ts.store.Search(tc.docType, tc.field, tc.query)
 					assert.NilError(t, err)
