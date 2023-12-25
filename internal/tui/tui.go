@@ -326,14 +326,16 @@ Select search options:
 			return lipgloss.JoinVertical(
 				lipgloss.Left,
 				headerText,
-				fmt.Sprintf("\nSearching %s documents", m.docType.SelectedItem()),
+				"",
+				fmt.Sprintf("Searching %s documents", m.docType.SelectedItem()),
 				m.styles.field.Render(m.field.View()),
 			)
 		case chosenDocTypeField:
 			return lipgloss.JoinVertical(
 				lipgloss.Left,
 				headerText,
-				fmt.Sprintf("\nSearching the %s field in %s documents", m.field.Value(), m.docType.SelectedItem()),
+				"",
+				fmt.Sprintf("Searching the %s field in %s documents", m.field.Value(), m.docType.SelectedItem()),
 				m.styles.query.Render(m.query.View()),
 			)
 		case results:
