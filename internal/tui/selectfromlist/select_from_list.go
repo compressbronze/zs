@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	listHeight   = 10
+	listHeight   = 20
 	defaultWidth = 80
 )
 

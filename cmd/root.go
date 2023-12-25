@@ -7,7 +7,6 @@ import (
 	"github.com/adrg/xdg"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/log"
-	"github.com/satrap-illustrations/zs/internal/stores/implementations"
 	"github.com/satrap-illustrations/zs/internal/tui"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -15,8 +14,9 @@ import (
 
 func Execute() error {
 	var (
-		cfgFile string
-		dataDir string
+		cfgFile   string
+		dataDir   string
+		debugFile string
 	)
 
 	cobra.OnInitialize(func() { initConfig(cfgFile) })
@@ -29,13 +29,15 @@ func Execute() error {
 
 It searches Zendesk.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			store, err := implementations.NewInvertedStore(dataDir)
-			if err != nil {
-				return err
+			if len(debugFile) > 0 {
+				f, err := tea.LogToFile(debugFile, "")
+				if err != nil {
+					return err
+				}
+				defer f.Close()
 			}
 
-			p := tea.NewProgram(tui.InitialModel(store))
-			if _, err := p.Run(); err != nil {
+			if _, err := tea.NewProgram(tui.InitialModel(dataDir)).Run(); err != nil {
 				return err
 			}
 
@@ -43,9 +45,25 @@ It searches Zendesk.`,
 		},
 	}
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/zs/config.yaml)")
-	rootCmd.Flags().StringVarP(&dataDir, "data-dir", "d", "./data", "data directory")
-	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "verbose output")
+	rootCmd.PersistentFlags().StringVar(
+		&cfgFile,
+		"config",
+		"",
+		"config file (default is $HOME/.config/zs/config.yaml)",
+	)
+	rootCmd.Flags().StringVarP(
+		&dataDir,
+		"data-dir",
+		"d",
+		"./data",
+		"data directory",
+	)
+	rootCmd.PersistentFlags().StringVar(
+		&debugFile,
+		"debug-file",
+		"",
+		"debug log file",
+	)
 
 	return rootCmd.ExecuteContext(context.Background())
 }

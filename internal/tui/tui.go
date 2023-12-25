@@ -11,6 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/satrap-illustrations/zs/internal/models"
 	"github.com/satrap-illustrations/zs/internal/stores"
+	"github.com/satrap-illustrations/zs/internal/stores/implementations"
 	"github.com/satrap-illustrations/zs/internal/tui/selectfromlist"
 )
 
@@ -20,6 +21,7 @@ type state int
 
 const (
 	header state = iota
+	storeLoadError
 	selectOptions
 	search
 	chosenDocType
@@ -65,30 +67,44 @@ func DefaultStyles() *styles {
 	}
 }
 
+type (
+	loadStoreMsg       struct{}
+	storeLoadedSuccMsg struct{ store stores.Store }
+	storeLoadErrMsg    struct{ err error }
+)
+
+func loadStore(dataDir string) tea.Cmd {
+	store, err := implementations.NewInvertedStore(dataDir)
+	if err != nil {
+		return func() tea.Msg { return storeLoadErrMsg{err: err} }
+	}
+	return func() tea.Msg { return storeLoadedSuccMsg{store: store} }
+}
+
 type model struct {
 	state          state
+	dataDir        string
+	store          stores.Store
 	styles         *styles
 	width, height  int
 	docType, field selectfromlist.Model
 	query          textinput.Model
 	resultsErr     error
-	store          stores.Store
 	veiwport       viewport.Model
 	quitting       bool
 }
 
-func InitialModel(store stores.Store) model {
+func InitialModel(dataDir string) model {
 	styles := DefaultStyles()
-	docTypes := store.ListDocumentTypes()
 	query := textinput.New()
 	query.ShowSuggestions = true
 
 	return model{
+		dataDir:  dataDir,
 		styles:   styles,
-		docType:  selectfromlist.New("Select a document type...", docTypes),
+		docType:  selectfromlist.New("Select a document type...", []string{}),
 		field:    selectfromlist.New("Select a field...", []string{}),
 		query:    query,
-		store:    store,
 		veiwport: viewport.New(0, 0),
 	}
 }
@@ -117,28 +133,50 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 
 		m.veiwport.Update(msg)
+		// adjust for borders, margins etc
 		m.veiwport.Width = m.width - 4
+		//nolint:exhaustive
 		switch m.state {
-		case listFields, header, selectOptions, search, chosenDocType, chosenDocTypeField:
+		case listFields:
 			m.veiwport.Height = m.height - 4
 		case results:
 			m.veiwport.Height = m.height - 5
+		default:
 		}
 
 		m.docType.Update(msg)
 		m.field.Update(msg)
 
+		if m.store == nil {
+			return m, func() tea.Msg {
+				return loadStoreMsg{}
+			}
+		}
+
+		return m, nil
+
+	case loadStoreMsg:
+		return m, loadStore(m.dataDir)
+
+	case storeLoadErrMsg:
+		m.state = storeLoadError
+		return m, tea.Quit
+
+	case storeLoadedSuccMsg:
+		m.store = msg.store
+		m.docType = selectfromlist.New("Select a document type...", m.store.ListDocumentTypes())
 		return m, nil
 
 	case tea.KeyMsg:
 		switch s := msg.String(); s {
-		// ctrl+c should exit the program from any state.
 		case "ctrl+c":
 			m.quitting = true
 			return m, tea.Quit
 
 		default:
 			switch m.state {
+			case storeLoadError:
+				return m, nil
 			case header:
 				switch s {
 				case "enter":
@@ -292,35 +330,51 @@ func (m model) View() string {
              \::/  /       \:\__\         /:/  /       |:|  |        \:\__\         /:/  /
               \/__/         \/__/         \/__/         \|__|         \/__/         \/__/
 
-Welcome to Zendesk Search
-Type 'ctrl+c' to exit at any time, Press 'enter' to continue.`
+Welcome to Zendesk Search`
+	const instructions = `Type 'ctrl+c' to exit at any time, Press 'enter' to continue.`
 
 	const searchText = `
 Select search options:
 1) Search Zendesk
-2) View a list of searchable fields
-`
+2) View a list of searchable fields`
 
 	s := func() string {
 		switch m.state {
+		case storeLoadError:
+			return lipgloss.JoinVertical(
+				lipgloss.Left,
+				headerText,
+				fmt.Sprintf("Could not read data from %q", m.dataDir),
+				fmt.Sprintf(
+					"Ensure you have the files %q present in this directory.\n",
+					[]string{"organizations.json", "tickets.json", "users.json"},
+				),
+			)
 		case header:
-			return headerText
+			return lipgloss.JoinVertical(
+				lipgloss.Left,
+				headerText,
+				instructions,
+			)
 		case selectOptions:
 			return lipgloss.JoinVertical(
 				lipgloss.Left,
 				headerText,
+				instructions,
 				searchText,
 			)
 		case search:
 			return lipgloss.JoinVertical(
 				lipgloss.Left,
 				headerText,
+				instructions,
 				m.styles.docType.Render(m.docType.View()),
 			)
 		case chosenDocType:
 			return lipgloss.JoinVertical(
 				lipgloss.Left,
 				headerText,
+				instructions,
 				"",
 				fmt.Sprintf("Searching %q documents", m.docType.SelectedItem()),
 				m.styles.field.Render(m.field.View()),
@@ -329,6 +383,7 @@ Select search options:
 			return lipgloss.JoinVertical(
 				lipgloss.Left,
 				headerText,
+				instructions,
 				"",
 				fmt.Sprintf(
 					"Searching the %q field in %q documents",
@@ -342,6 +397,7 @@ Select search options:
 				return lipgloss.JoinVertical(
 					lipgloss.Left,
 					headerText,
+					instructions,
 					"Error searching for documents:",
 					m.resultsErr.Error(),
 					"Press 'enter' to go back to the main menu.",
