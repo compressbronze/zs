@@ -322,7 +322,7 @@ Select search options:
 				lipgloss.Left,
 				headerText,
 				"",
-				fmt.Sprintf("Searching %s documents", m.docType.SelectedItem()),
+				fmt.Sprintf("Searching %q documents", m.docType.SelectedItem()),
 				m.styles.field.Render(m.field.View()),
 			)
 		case chosenDocTypeField:
@@ -330,7 +330,11 @@ Select search options:
 				lipgloss.Left,
 				headerText,
 				"",
-				fmt.Sprintf("Searching the %s field in %s documents", m.field.Value(), m.docType.SelectedItem()),
+				fmt.Sprintf(
+					"Searching the %q field in %q documents",
+					m.field.SelectedItem(),
+					m.docType.SelectedItem(),
+				),
 				m.styles.query.Render(m.query.View()),
 			)
 		case results:
