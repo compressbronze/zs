@@ -68,8 +68,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
-		// These keys should exit the program.
-		case "ctrl+c", "ctrl+d":
+		// ctrl+c should exit the program from any state.
+		case "ctrl+c":
 			return newModel, tea.Quit
 
 		default:
@@ -88,12 +88,33 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return newModel, nil
 			case searchZendesk:
+				switch msg.String() {
+				case "ctrl+d":
+					newModel.state = selectOptions
+					newModel.query, cmd = newModel.query.Update("")
+					return newModel, cmd
+				case "enter":
+				}
 				newModel.query, cmd = newModel.query.Update(msg)
 				return newModel, cmd
 			case searchZendeskChosenType:
+				switch msg.String() {
+				case "ctrl+d":
+					newModel.state = selectOptions
+					newModel.query, cmd = newModel.query.Update("")
+					return newModel, cmd
+				case "enter":
+				}
 				newModel.query, cmd = newModel.query.Update(msg)
 				return newModel, cmd
 			case list:
+				switch msg.String() {
+				case "ctrl+d":
+					newModel.state = selectOptions
+					newModel.query, cmd = newModel.query.Update("")
+					return newModel, cmd
+				case "enter":
+				}
 				newModel.query, cmd = newModel.query.Update(msg)
 				return newModel, cmd
 			}
@@ -134,7 +155,7 @@ func (m model) View() string {
               \/__/         \/__/         \/__/         \|__|         \/__/         \/__/
 
 Welcome to Zendesk Search
-Type 'Ctrl+c' or 'Ctrl+d' to exit at any time, Press 'Enter' to continue.`
+Type 'ctrl+c' to exit at any time, Press 'enter' to continue.`
 
 	searchText := `
 Select search options:
