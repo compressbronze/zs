@@ -84,7 +84,16 @@ func (u *User) ValueAt(field string) (any, error) {
 }
 
 func (*User) Contains() []ContainedModel {
-	return []ContainedModel{}
+	return []ContainedModel{
+		{
+			Model: &Ticket{},
+			Field: "submitter_id",
+		},
+		{
+			Model: &Ticket{},
+			Field: "assignee_id",
+		},
+	}
 }
 
 func (u *User) String() (string, error) {

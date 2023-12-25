@@ -22,6 +22,12 @@ func Tokenise(m models.Model) []Token {
 		// When the data has other types, this needs to be extended
 		switch value := m.ValueAtIdx(el.Value).(type) {
 		case string:
+			// allow searching for empty strings
+			if value == "" {
+				tokens = append(tokens, Token{Text: "", Field: el.Key})
+				continue
+			}
+
 			for _, s := range strings.Split(value, " ") {
 				if s == "" {
 					continue

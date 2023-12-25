@@ -80,16 +80,7 @@ func (t *Ticket) ValueAt(field string) (any, error) {
 }
 
 func (*Ticket) Contains() []ContainedModel {
-	return []ContainedModel{
-		{
-			Model: &User{},
-			Field: "submitter_id",
-		},
-		{
-			Model: &User{},
-			Field: "assignee_id",
-		},
-	}
+	return []ContainedModel{}
 }
 
 func (t *Ticket) String() (string, error) {

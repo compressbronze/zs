@@ -23,6 +23,10 @@ func TestTokenise(t *testing.T) {
 			name:  "Organization_zero",
 			model: &models.Organization{},
 			expectedTokens: []tokeniser.Token{
+				{Field: "created_at"},
+				{Field: "details"},
+				{Field: "name"},
+				{Field: "url"},
 				{Text: "0", Field: "_id"},
 				{Text: "false", Field: "shared_tickets"},
 			},
