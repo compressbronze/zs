@@ -36,6 +36,9 @@ This launches a terminal user interface (tui) that explains the available featur
 
 If you run the program as a binary, you will most likely need to set the data directory that contains JSON files to search. The files `organaization.json`, `tickets.json`, and `users.json` MUST be present in that directory.
 
+# Demo
+<img width="1200" src="./demo/demo.gif" />
+
 # Design
 
 ## Data
