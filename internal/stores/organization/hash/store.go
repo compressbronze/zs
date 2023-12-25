@@ -14,7 +14,7 @@ type OrganizationStore map[int]models.Organization
 func NewOrganizationStore(organizations []models.Organization) OrganizationStore {
 	out := OrganizationStore{}
 	for _, organization := range organizations {
-		out[organization.Id] = organization
+		out[organization.ID] = organization
 	}
 	return out
 }

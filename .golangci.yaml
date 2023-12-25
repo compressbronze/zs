@@ -315,7 +315,7 @@ linters-settings:
         severity: warning
         disabled: false
         arguments:
-          - ["ID"] # AllowList
+          - [] # AllowList
           - ["VM"] # DenyList
       - name: var-declaration
         severity: warning

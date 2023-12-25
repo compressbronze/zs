@@ -14,7 +14,7 @@ type TicketStore map[uuid.UUID]models.Ticket
 func NewTicketStore(tickets []models.Ticket) TicketStore {
 	out := TicketStore{}
 	for _, ticket := range tickets {
-		out[ticket.Id] = ticket
+		out[ticket.ID] = ticket
 	}
 	return out
 }

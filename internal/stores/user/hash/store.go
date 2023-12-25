@@ -14,7 +14,7 @@ type UserStore map[int]models.User
 func NewUserStore(users []models.User) UserStore {
 	out := UserStore{}
 	for _, user := range users {
-		out[user.Id] = user
+		out[user.ID] = user
 	}
 	return out
 }
