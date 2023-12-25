@@ -73,7 +73,7 @@ func DefaultStyles() *styles {
 			NewStyle().
 			Padding(0, 1).
 			Margin(0, 0, 1, 0).
-			BorderForeground(lipgloss.Color("#a134eb")).
+			BorderForeground(lipgloss.Color("#ed095d")).
 			BorderStyle(lipgloss.RoundedBorder()),
 	}
 }
@@ -101,19 +101,14 @@ func (model) Init() tea.Cmd {
 }
 
 func (m model) Clear() (tea.Model, tea.Cmd) {
-	var cmd tea.Cmd
-	cmds := make([]tea.Cmd, 0, 4)
-	m.docType, cmd = m.docType.Update("")
-	cmds = append(cmds, cmd)
-	m.query, cmd = m.query.Update("")
-	cmds = append(cmds, cmd)
-	m.field, cmd = m.field.Update("")
-	cmds = append(cmds, cmd)
-	m.veiwport.SetContent("")
-
+	m.docType = doctypelist.New(m.store.ListDocumentTypes())
+	m.query = textinput.New()
+	m.query.ShowSuggestions = true
+	m.field = textinput.New()
+	m.veiwport = viewport.New(0, 0)
 	m.resultsErr = nil
 
-	return m, tea.Batch(cmds...)
+	return m, nil
 }
 
 //nolint:revive
@@ -125,7 +120,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 
-		m.veiwport.Width = m.width - 2
+		m.veiwport.Width = m.width - 4
 		switch m.state {
 		case listFields, header, selectOptions, search, chosenDocType, chosenDocTypeField:
 			m.veiwport.Height = m.height - 4
@@ -156,7 +151,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.state = search
 				case "2":
 					m.state = listFields
-					m.veiwport.Height = m.height - 5
+					m.Clear()
+					m.veiwport.Width = m.width - 4
+					m.veiwport.Height = m.height - 4
 					m.veiwport.SetContent(formatFieldsList(m.store.ListFields(), m.veiwport.Width))
 				}
 				return m, nil
@@ -213,14 +210,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return m, nil
 					}
 
-					formattedResults, err := formatResults(resultDocs)
+					m.Clear()
+					m.veiwport.Width = m.width - 4
+					m.veiwport.Height = m.height - 5
+					formattedResults, err := formatResults(resultDocs, m.veiwport.Width)
 					if err != nil {
 						m.state = results
 						m.resultsErr = err
 						return m, nil
 					}
-
-					m.veiwport.Height = m.height - 5
 					m.veiwport.SetContent(formattedResults)
 					m.state = results
 					return m, nil
@@ -234,7 +232,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.state = selectOptions
 					return m.Clear()
 				default:
-					return m, nil
+					m.veiwport, cmd = m.veiwport.Update(msg)
+					return m, cmd
 				}
 			case listFields:
 				switch s {
@@ -346,12 +345,11 @@ Select search options:
 	}
 }
 
-func formatResults(results []models.Model) (string, error) {
+func formatResults(results []models.Model, width int) (string, error) {
 	var out strings.Builder
 	for _, result := range results {
-		docType := result.DocumentType()
-		_, _ = fmt.Fprintf(&out, "%s\n", docType)
-		_, _ = fmt.Fprintf(&out, "%s\n", strings.Repeat("-", len(docType)))
+		_, _ = fmt.Fprintf(&out, "%s\n", result.DocumentType())
+		_, _ = fmt.Fprintf(&out, "%s\n", strings.Repeat("-", width))
 
 		buf, err := models.StringOf(result)
 		if err != nil {
