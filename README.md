@@ -2,9 +2,18 @@ Zendesk Search
 ===
 
 # Installation
-Ensuring you have the [go toolchain](https://go.dev/doc/install) installed, run
+Ensuring you have the [go toolchain v1.21+](https://go.dev/doc/install) installed, run
 ```shell
 go install github.com/satrap-illustrations/zs@main
+```
+If your `PATH` includes `$GOPATH/bin` or `$GOBIN`, then you should be run the program in a terminal by executing
+```shell
+zs
+```
+
+Alternatively, you may checkout the source, `cd` into the checkout directory and run
+```shell
+go run .
 ```
 
 # Usage
