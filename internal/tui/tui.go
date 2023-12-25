@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/satrap-illustrations/zs/internal/stores"
+	"github.com/satrap-illustrations/zs/internal/tui/doctypelist"
 )
 
 type state int
@@ -15,52 +16,65 @@ type state int
 const (
 	header state = iota
 	selectOptions
-	searchZendesk
-	searchZendeskDocType
-	list
+	search
+	chosenDocType
+	chosenDocTypeField
+	results
+	listFields
 )
 
 type model struct {
 	state         state
 	styles        *styles
 	width, height int
-	query         textinput.Model
-	docType       textinput.Model
+	docType       doctypelist.Model
+	field, query  textinput.Model
 	store         stores.Store
 }
 
 type styles struct {
 	docTypeField lipgloss.Style
+	fieldField   lipgloss.Style
 	queryField   lipgloss.Style
 }
 
 func DefaultStyles() *styles {
-	s := &styles{}
-	s.docTypeField = lipgloss.
-		NewStyle().
-		BorderForeground(lipgloss.Color("#154733")).
-		BorderStyle(lipgloss.RoundedBorder()).
-		Padding(1).
-		Width(50)
-	s.queryField = lipgloss.
-		NewStyle().
-		BorderForeground(lipgloss.Color("#a134eb")).
-		BorderStyle(lipgloss.RoundedBorder()).
-		Padding(1).
-		Width(50)
-	return s
+	return &styles{
+		docTypeField: lipgloss.
+			NewStyle().
+			BorderForeground(lipgloss.Color("#154733")).
+			BorderStyle(lipgloss.RoundedBorder()).
+			Padding(1).
+			Width(80),
+		fieldField: lipgloss.
+			NewStyle().
+			BorderForeground(lipgloss.Color("#ed095d")).
+			BorderStyle(lipgloss.RoundedBorder()).
+			Padding(1).
+			Width(80),
+		queryField: lipgloss.
+			NewStyle().
+			BorderForeground(lipgloss.Color("#a134eb")).
+			BorderStyle(lipgloss.RoundedBorder()).
+			Padding(1).
+			Width(80),
+	}
 }
 
 func InitialModel(store stores.Store) model {
 	styles := DefaultStyles()
-	docType := textinput.New()
-	docType.Placeholder = "Input a document type to search..."
+	docTypes := store.ListDocumentTypes()
+	docType := doctypelist.New(docTypes)
+
+	field := textinput.New()
+	field.Placeholder = "Input a field to search in..."
 
 	query := textinput.New()
 	query.Placeholder = "Input a word to search for..."
 	return model{
 		styles:  styles,
 		docType: docType,
+		field:   field,
 		query:   query,
 		store:   store,
 	}
@@ -88,48 +102,69 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		default:
 			switch newModel.state {
 			case header:
-				if msg.String() == "enter" {
+				switch s {
+				case "enter":
 					newModel.state = selectOptions
+					return newModel, nil
+				default:
+					return newModel, nil
 				}
-				return newModel, nil
 			case selectOptions:
 				switch s {
 				case "1":
-					newModel.state = searchZendesk
-					newModel.docType.Focus()
+					newModel.state = search
 				case "2":
-					newModel.state = list
+					newModel.state = listFields
 				}
 				return newModel, nil
-			case searchZendesk:
+			case search:
 				switch s {
 				case "ctrl+d":
 					newModel.state = selectOptions
-					newModel.docType, cmd = newModel.docType.Update("")
+					return newModel, nil
+				case "enter":
+					newModel.state = chosenDocType
+					newModel.field.Focus()
+					return newModel, nil
+				default:
+					newModel.docType, cmd = newModel.docType.Update(msg)
+					return newModel, cmd
+				}
+			case chosenDocType:
+				switch s {
+				case "ctrl+d":
+					newModel.state = selectOptions
+					newModel.docType, _ = newModel.docType.Update("")
+					newModel.field, cmd = newModel.field.Update("")
 					return newModel, cmd
 				case "enter":
-					newModel.state = searchZendeskDocType
+					newModel.state = chosenDocTypeField
 					newModel.query.Focus()
+					return newModel, cmd
+				default:
+					newModel.field, cmd = newModel.field.Update(msg)
+					return newModel, cmd
+				}
+			case chosenDocTypeField:
+				switch s {
+				case "ctrl+d":
+					newModel.state = selectOptions
+					newModel.docType, _ = newModel.docType.Update("")
+					newModel.field, _ = newModel.field.Update("")
+					newModel.query, _ = newModel.query.Update("")
+					return newModel, nil
+				default:
+					newModel.query, cmd = newModel.query.Update(msg)
+					return newModel, cmd
+				}
+			case listFields:
+				switch s {
+				case "enter":
+					newModel.state = selectOptions
+					return newModel, nil
+				default:
 					return newModel, nil
 				}
-				newModel.docType, cmd = newModel.docType.Update(msg)
-				return newModel, cmd
-			case searchZendeskDocType:
-				switch s {
-				case "ctrl+d":
-					newModel.state = selectOptions
-					newModel.query, cmd = newModel.query.Update("")
-					return newModel, cmd
-				case "enter":
-				}
-				newModel.query, cmd = newModel.query.Update(msg)
-				return newModel, cmd
-			case list:
-				if s == "enter" {
-					newModel.state = selectOptions
-					return newModel, cmd
-				}
-				return newModel, cmd
 			}
 		}
 	}
@@ -143,7 +178,7 @@ func (m model) View() string {
 		return "Loading..."
 	}
 
-	headerText := `
+	const headerText = `
       ___           ___           ___           ___           ___           ___           ___
      /\  \         /\  \         /\__\         /\  \         /\  \         /\  \         /\__\
      \:\  \       /::\  \       /::|  |       /::\  \       /::\  \       /::\  \       /:/  /
@@ -170,7 +205,7 @@ func (m model) View() string {
 Welcome to Zendesk Search
 Type 'ctrl+c' to exit at any time, Press 'enter' to continue.`
 
-	searchText := `
+	const searchText = `
 Select search options:
 1) Search Zendesk
 2) View a list of searchable fields
@@ -185,23 +220,39 @@ Select search options:
 			headerText,
 			searchText,
 		)
-	case searchZendesk:
+	case search:
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
 			headerText,
-			searchText,
 			m.styles.docTypeField.Render(m.docType.View()),
 			"",
 		)
-	case searchZendeskDocType:
+	case chosenDocType:
+		m.field.Placeholder = fmt.Sprintf(
+			"Type a %s field to search...",
+			m.docType.SelectedItem(),
+		)
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
 			headerText,
-			searchText,
+			fmt.Sprintf("\nSearching %s documents", m.docType.SelectedItem()),
+			m.styles.fieldField.Render(m.field.View()),
+			"",
+		)
+	case chosenDocTypeField:
+		m.query.Placeholder = fmt.Sprintf(
+			"Type a value to search for %s in %s...",
+			m.field.Value(),
+			m.docType.SelectedItem(),
+		)
+		return lipgloss.JoinVertical(
+			lipgloss.Left,
+			headerText,
+			fmt.Sprintf("\nSearching the %s field in %s documents", m.field.Value(), m.docType.SelectedItem()),
 			m.styles.queryField.Render(m.query.View()),
 			"",
 		)
-	case list:
+	case listFields:
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
 			"Press 'enter' to go back to the main menu.",
