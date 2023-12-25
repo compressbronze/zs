@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -12,6 +13,8 @@ import (
 	"github.com/satrap-illustrations/zs/internal/stores"
 	"github.com/satrap-illustrations/zs/internal/tui/doctypelist"
 )
+
+var ErrNoResults = errors.New("no documents found")
 
 type state int
 
@@ -221,6 +224,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					m.veiwport.Width = m.width - 4
 					m.veiwport.Height = m.height - 5
+
+					if len(resultDocs) == 0 {
+						m.state = results
+						m.resultsErr = ErrNoResults
+						return m, nil
+					}
 					formattedResults, err := formatResults(resultDocs, m.veiwport.Width)
 					if err != nil {
 						m.state = results
