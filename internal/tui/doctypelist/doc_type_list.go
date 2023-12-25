@@ -37,8 +37,6 @@ func (itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.I
 		return
 	}
 
-	str := fmt.Sprintf("%d. %s", index+1, i)
-
 	fn := itemStyle.Render
 	if index == m.Index() {
 		fn = func(s ...string) string {
@@ -46,7 +44,7 @@ func (itemDelegate) Render(w io.Writer, m list.Model, index int, listItem list.I
 		}
 	}
 
-	_, _ = fmt.Fprint(w, fn(str))
+	_, _ = fmt.Fprint(w, fn(string(i)))
 }
 
 type Model struct {
@@ -93,6 +91,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		switch keypress := msg.String(); keypress {
 		case "ctrl+c":
 			return m, tea.Quit
+		default:
 		}
 	}
 

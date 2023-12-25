@@ -7,6 +7,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/satrap-illustrations/zs/internal/models"
 	"github.com/satrap-illustrations/zs/internal/stores"
 	"github.com/satrap-illustrations/zs/internal/tui/doctypelist"
 )
@@ -29,6 +30,8 @@ type model struct {
 	width, height int
 	docType       doctypelist.Model
 	field, query  textinput.Model
+	results       []models.Model
+	resultsErr    error
 	store         stores.Store
 }
 
@@ -65,12 +68,9 @@ func InitialModel(store stores.Store) model {
 	styles := DefaultStyles()
 	docTypes := store.ListDocumentTypes()
 	docType := doctypelist.New(docTypes)
-
 	field := textinput.New()
-	field.Placeholder = "Input a field to search in..."
-
 	query := textinput.New()
-	query.Placeholder = "Input a word to search for..."
+	query.ShowSuggestions = true
 	return model{
 		styles:  styles,
 		docType: docType,
@@ -84,93 +84,134 @@ func (model) Init() tea.Cmd {
 	return nil
 }
 
+func (m model) Clear() (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	cmds := make([]tea.Cmd, 0, 3)
+	m.docType, cmd = m.docType.Update("")
+	cmds = append(cmds, cmd)
+	m.query, cmd = m.query.Update("")
+	cmds = append(cmds, cmd)
+	m.field, cmd = m.field.Update("")
+	cmds = append(cmds, cmd)
+
+	m.results = nil
+	m.resultsErr = nil
+
+	return m, tea.Batch(cmds...)
+}
+
+//nolint:revive
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
-	newModel := m
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		newModel.width = msg.Width
-		newModel.height = msg.Height
+		m.width = msg.Width
+		m.height = msg.Height
 
 	case tea.KeyMsg:
 		switch s := msg.String(); s {
 		// ctrl+c should exit the program from any state.
 		case "ctrl+c":
-			return newModel, tea.Quit
+			return m, tea.Quit
 
 		default:
-			switch newModel.state {
+			switch m.state {
 			case header:
 				switch s {
 				case "enter":
-					newModel.state = selectOptions
-					return newModel, nil
+					m.state = selectOptions
+					return m, nil
 				default:
-					return newModel, nil
+					return m, nil
 				}
 			case selectOptions:
 				switch s {
 				case "1":
-					newModel.state = search
+					m.state = search
 				case "2":
-					newModel.state = listFields
+					m.state = listFields
 				}
-				return newModel, nil
+				return m, nil
 			case search:
 				switch s {
 				case "ctrl+d":
-					newModel.state = selectOptions
-					return newModel, nil
+					m.state = selectOptions
+					return m.Clear()
 				case "enter":
-					newModel.state = chosenDocType
-					newModel.field.Focus()
-					return newModel, nil
+					m.state = chosenDocType
+					m.field.Placeholder = fmt.Sprintf(
+						"Type a field to search in %s...",
+						m.docType.SelectedItem(),
+					)
+					m.field.SetSuggestions(m.store.ListFields()[m.docType.SelectedItem()])
+					m.field.Focus()
+					return m, nil
 				default:
-					newModel.docType, cmd = newModel.docType.Update(msg)
-					return newModel, cmd
+					m.docType, cmd = m.docType.Update(msg)
+					return m, cmd
 				}
 			case chosenDocType:
 				switch s {
 				case "ctrl+d":
-					newModel.state = selectOptions
-					newModel.docType, _ = newModel.docType.Update("")
-					newModel.field, cmd = newModel.field.Update("")
-					return newModel, cmd
+					m.state = selectOptions
+					return m.Clear()
 				case "enter":
-					newModel.state = chosenDocTypeField
-					newModel.query.Focus()
-					return newModel, cmd
+					m.state = chosenDocTypeField
+					m.query.Placeholder = fmt.Sprintf(
+						"Type a value of %s in %s to search for...",
+						m.field.Value(),
+						m.docType.SelectedItem(),
+					)
+					m.query.Focus()
+					return m, cmd
 				default:
-					newModel.field, cmd = newModel.field.Update(msg)
-					return newModel, cmd
+					m.field, cmd = m.field.Update(msg)
+					return m, cmd
 				}
 			case chosenDocTypeField:
 				switch s {
 				case "ctrl+d":
-					newModel.state = selectOptions
-					newModel.docType, _ = newModel.docType.Update("")
-					newModel.field, _ = newModel.field.Update("")
-					newModel.query, _ = newModel.query.Update("")
-					return newModel, nil
+					m.state = selectOptions
+					return m.Clear()
+				case "enter":
+					m.results, m.resultsErr = m.store.Search(
+						m.docType.SelectedItem(),
+						m.field.Value(),
+						m.query.Value(),
+					)
+					if m.resultsErr != nil {
+						m.state = results
+						return m, nil
+					}
+					m.state = results
+					return m, nil
 				default:
-					newModel.query, cmd = newModel.query.Update(msg)
-					return newModel, cmd
+					m.query, cmd = m.query.Update(msg)
+					return m, cmd
+				}
+			case results:
+				switch s {
+				case "enter":
+					m.state = selectOptions
+					return m.Clear()
+				default:
+					return m, nil
 				}
 			case listFields:
 				switch s {
 				case "enter":
-					newModel.state = selectOptions
-					return newModel, nil
+					m.state = selectOptions
+					return m, nil
 				default:
-					return newModel, nil
+					return m, nil
 				}
 			}
 		}
 	}
 
-	newModel.query, cmd = newModel.query.Update(msg)
-	return newModel, cmd
+	m.query, cmd = m.query.Update(msg)
+	return m, cmd
 }
 
 func (m model) View() string {
@@ -228,10 +269,6 @@ Select search options:
 			"",
 		)
 	case chosenDocType:
-		m.field.Placeholder = fmt.Sprintf(
-			"Type a %s field to search...",
-			m.docType.SelectedItem(),
-		)
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
 			headerText,
@@ -240,17 +277,19 @@ Select search options:
 			"",
 		)
 	case chosenDocTypeField:
-		m.query.Placeholder = fmt.Sprintf(
-			"Type a value to search for %s in %s...",
-			m.field.Value(),
-			m.docType.SelectedItem(),
-		)
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
 			headerText,
 			fmt.Sprintf("\nSearching the %s field in %s documents", m.field.Value(), m.docType.SelectedItem()),
 			m.styles.queryField.Render(m.query.View()),
 			"",
+		)
+	case results:
+		return lipgloss.JoinVertical(
+			lipgloss.Left,
+			headerText,
+			"\nFound the following documents:",
+			formatResults(m.results),
 		)
 	case listFields:
 		return lipgloss.JoinVertical(
@@ -261,6 +300,18 @@ Select search options:
 	default:
 		return "Unknown state"
 	}
+}
+
+func formatResults(results []models.Model) string {
+	var out strings.Builder
+	for _, result := range results {
+		buf, err := models.StringOf(result)
+		if err != nil {
+			return fmt.Sprintf("failed to string value: %s", err)
+		}
+		_, _ = fmt.Fprintf(&out, "%s\n", buf)
+	}
+	return out.String()
 }
 
 func formatFieldsList(fieldsMap map[string][]string, width int) string {
