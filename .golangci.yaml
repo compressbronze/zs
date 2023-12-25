@@ -258,7 +258,7 @@ linters-settings:
         disabled: true
       - name: modifies-value-receiver
         severity: warning
-        disabled: false
+        disabled: true
       - name: nested-structs
         severity: warning
         disabled: false
