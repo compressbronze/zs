@@ -36,10 +36,14 @@ func (u *User) Fields() map[string]bool {
 	fields := make(map[string]bool, ty.NumField())
 	for i := 0; i < ty.NumField(); i++ {
 		parts := strings.SplitN(ty.Field(i).Tag.Get("json"), ",", 2)
-		if parts[0] == "-" {
+		switch parts[0] {
+		case "-":
 			continue
+		case "":
+			fields[ty.Field(i).Name] = true
+		default:
+			fields[parts[0]] = true
 		}
-		fields[parts[0]] = true
 	}
 	return fields
 }
