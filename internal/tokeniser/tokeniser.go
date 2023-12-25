@@ -8,6 +8,8 @@ import (
 	"github.com/satrap-illustrations/zs/internal/models"
 )
 
+// Tokenise extracts tokens from a model
+//
 //nolint:revive
 func Tokenise(m models.Model) []string {
 	tokens := []string{}
@@ -20,7 +22,7 @@ func Tokenise(m models.Model) []string {
 				if s == "" {
 					continue
 				}
-				tokens = append(tokens, s)
+				tokens = append(tokens, normaliser(s))
 			}
 		case []string:
 			for _, t := range value {
@@ -28,7 +30,7 @@ func Tokenise(m models.Model) []string {
 					if s == "" {
 						continue
 					}
-					tokens = append(tokens, s)
+					tokens = append(tokens, normaliser(s))
 				}
 			}
 		case int:
@@ -44,4 +46,10 @@ func Tokenise(m models.Model) []string {
 		}
 	}
 	return tokens
+}
+
+// normaliser applies the following transformation to a string:
+// 1. Removes leading and traliing punctuation.
+func normaliser(s string) string {
+	return strings.Trim(s, `?!.,;:"'_`)
 }
