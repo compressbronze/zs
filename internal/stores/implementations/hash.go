@@ -34,6 +34,10 @@ func readJSONFile(path string, v any) error {
 	return json.NewDecoder(f).Decode(v)
 }
 
+func (*HashStore) ListDocumentTypes() []string {
+	return []string{"Organizations", "Tickets", "Users"}
+}
+
 func NewHashStore(path string) (*HashStore, error) {
 	organizations := []models.Organization{}
 	if err := readJSONFile(filepath.Join(path, "organizations.json"), &organizations); err != nil {
@@ -67,13 +71,13 @@ func (h *HashStore) ListFields() map[string][]string {
 
 func (h *HashStore) Search(doctype, field, query string) ([]models.Model, error) {
 	switch doctype {
-	case "organizations":
+	case "Organizations":
 		organizations, err := h.organizationStore.Search(field, query)
 		return models.OrganizationSliceToModelsSlice(organizations), err
-	case "tickets":
+	case "Tickets":
 		tickets, err := h.ticketStore.Search(field, query)
 		return models.TicketSliceToModelsSlice(tickets), err
-	case "users":
+	case "Users":
 		users, err := h.userStore.Search(field, query)
 		return models.UserSliceToModelsSlice(users), err
 	default:
