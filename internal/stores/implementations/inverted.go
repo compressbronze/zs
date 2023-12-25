@@ -48,9 +48,9 @@ func NewInvertedStore(path string) (*InvertedStore, error) {
 
 func (h *InvertedStore) ListFields() map[string][]string {
 	return map[string][]string{
-		"organizations": h.organizationStore.ListFields(),
-		"tickets":       h.ticketStore.ListFields(),
-		"users":         h.userStore.ListFields(),
+		"Organizations": h.organizationStore.ListFields(),
+		"Tickets":       h.ticketStore.ListFields(),
+		"Users":         h.userStore.ListFields(),
 	}
 }
 

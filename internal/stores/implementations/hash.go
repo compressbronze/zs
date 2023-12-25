@@ -49,9 +49,9 @@ func NewHashStore(path string) (*HashStore, error) {
 
 func (h *HashStore) ListFields() map[string][]string {
 	return map[string][]string{
-		"organizations": h.organizationStore.ListFields(),
-		"tickets":       h.ticketStore.ListFields(),
-		"users":         h.userStore.ListFields(),
+		"Organizations": h.organizationStore.ListFields(),
+		"Tickets":       h.ticketStore.ListFields(),
+		"Users":         h.userStore.ListFields(),
 	}
 }
 
