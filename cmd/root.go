@@ -29,7 +29,7 @@ func Execute() error {
 
 It searches Zendesk.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			store, err := implementations.NewHashStore(dataDir)
+			store, err := implementations.NewInvertedStore(dataDir)
 			if err != nil {
 				return err
 			}
