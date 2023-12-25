@@ -14,6 +14,9 @@ import (
 var ErrFieldNotFound = fmt.Errorf("field not found")
 
 type Model interface {
+	// DocumentType returns a string representation of the type of the Model.
+	DocumentType() string
+
 	// Fields returns a the fields in the Model mapped to an index.
 	Fields() *orderedmap.OrderedMap[string, int]
 

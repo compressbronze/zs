@@ -31,6 +31,10 @@ type User struct {
 	Role           string    `json:"role"`
 }
 
+func (*User) DocumentType() string {
+	return "User"
+}
+
 func (u *User) Fields() *orderedmap.OrderedMap[string, int] {
 	if u == nil {
 		u = &User{}

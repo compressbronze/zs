@@ -25,14 +25,14 @@ const (
 )
 
 type model struct {
-	state         state
-	styles        *styles
-	width, height int
-	docType       doctypelist.Model
-	field, query  textinput.Model
-	results       []models.Model
-	resultsErr    error
-	store         stores.Store
+	state            state
+	styles           *styles
+	width, height    int
+	docType          doctypelist.Model
+	field, query     textinput.Model
+	formattedResults string
+	resultsErr       error
+	store            stores.Store
 }
 
 type styles struct {
@@ -94,7 +94,7 @@ func (m model) Clear() (tea.Model, tea.Cmd) {
 	m.field, cmd = m.field.Update("")
 	cmds = append(cmds, cmd)
 
-	m.results = nil
+	m.formattedResults = ""
 	m.resultsErr = nil
 
 	return m, tea.Batch(cmds...)
@@ -175,15 +175,24 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.state = selectOptions
 					return m.Clear()
 				case "enter":
-					m.results, m.resultsErr = m.store.Search(
+					resultDocs, err := m.store.Search(
 						m.docType.SelectedItem(),
 						m.field.Value(),
 						m.query.Value(),
 					)
-					if m.resultsErr != nil {
+					if err != nil {
 						m.state = results
+						m.resultsErr = err
 						return m, nil
 					}
+
+					m.formattedResults, err = formatResults(resultDocs)
+					if err != nil {
+						m.state = results
+						m.resultsErr = err
+						return m, nil
+					}
+
 					m.state = results
 					return m, nil
 				default:
@@ -285,11 +294,21 @@ Select search options:
 			"",
 		)
 	case results:
+		if m.resultsErr != nil {
+			return lipgloss.JoinVertical(
+				lipgloss.Left,
+				headerText,
+				"\nError searching for documents:",
+				m.resultsErr.Error(),
+				"Press 'enter' to go back to the main menu.",
+			)
+		}
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
 			headerText,
 			"\nFound the following documents:",
-			formatResults(m.results),
+			m.formattedResults,
+			"Press 'enter' to go back to the main menu.",
 		)
 	case listFields:
 		return lipgloss.JoinVertical(
@@ -302,16 +321,21 @@ Select search options:
 	}
 }
 
-func formatResults(results []models.Model) string {
+func formatResults(results []models.Model) (string, error) {
 	var out strings.Builder
 	for _, result := range results {
+		docType := result.DocumentType()
+		_, _ = fmt.Fprintf(&out, "%s\n", docType)
+		_, _ = fmt.Fprintf(&out, "%s\n", strings.Repeat("-", len(docType)))
+
 		buf, err := models.StringOf(result)
 		if err != nil {
-			return fmt.Sprintf("failed to string value: %s", err)
+			return "", fmt.Errorf("failed to string value: %w", err)
 		}
 		_, _ = fmt.Fprintf(&out, "%s\n", buf)
+		_, _ = fmt.Fprintln(&out, "")
 	}
-	return out.String()
+	return out.String(), nil
 }
 
 func formatFieldsList(fieldsMap map[string][]string, width int) string {

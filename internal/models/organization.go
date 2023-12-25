@@ -21,6 +21,10 @@ type Organization struct {
 	Tags          []string  `json:"tags"`
 }
 
+func (*Organization) DocumentType() string {
+	return "Organization"
+}
+
 func (o *Organization) Fields() *orderedmap.OrderedMap[string, int] {
 	if o == nil {
 		o = &Organization{}

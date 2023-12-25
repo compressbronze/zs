@@ -28,6 +28,10 @@ type Ticket struct {
 	Via            string    `json:"via"`
 }
 
+func (*Ticket) DocumentType() string {
+	return "Ticket"
+}
+
 func (t *Ticket) Fields() *orderedmap.OrderedMap[string, int] {
 	if t == nil {
 		t = &Ticket{}
