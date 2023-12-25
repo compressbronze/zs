@@ -11,7 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/satrap-illustrations/zs/internal/models"
 	"github.com/satrap-illustrations/zs/internal/stores"
-	"github.com/satrap-illustrations/zs/internal/tui/doctypelist"
+	"github.com/satrap-illustrations/zs/internal/tui/selectfromlist"
 )
 
 var ErrNoResults = errors.New("no documents found")
@@ -66,29 +66,27 @@ func DefaultStyles() *styles {
 }
 
 type model struct {
-	state         state
-	styles        *styles
-	width, height int
-	docType       doctypelist.Model
-	field, query  textinput.Model
-	resultsErr    error
-	store         stores.Store
-	veiwport      viewport.Model
-	quitting      bool
+	state          state
+	styles         *styles
+	width, height  int
+	docType, field selectfromlist.Model
+	query          textinput.Model
+	resultsErr     error
+	store          stores.Store
+	veiwport       viewport.Model
+	quitting       bool
 }
 
 func InitialModel(store stores.Store) model {
 	styles := DefaultStyles()
 	docTypes := store.ListDocumentTypes()
-	docType := doctypelist.New(docTypes)
-	field := textinput.New()
 	query := textinput.New()
 	query.ShowSuggestions = true
 
 	return model{
 		styles:   styles,
-		docType:  docType,
-		field:    field,
+		docType:  selectfromlist.New("Select a document type...", docTypes),
+		field:    selectfromlist.New("Select a field...", []string{}),
 		query:    query,
 		store:    store,
 		veiwport: viewport.New(0, 0),
@@ -101,18 +99,12 @@ func (model) Init() tea.Cmd {
 
 func (m model) Clear() (model, tea.Cmd) {
 	var cmd tea.Cmd
-	cmds := make([]tea.Cmd, 0, 4)
-	m.docType, cmd = m.docType.Update("")
-	cmds = append(cmds, cmd)
-	m.query, cmd = m.query.Update("")
-	cmds = append(cmds, cmd)
-	m.field, cmd = m.field.Update("")
-	cmds = append(cmds, cmd)
+	m.docType.SetItems([]string{})
+	m.field.SetItems([]string{})
 	m.veiwport.SetContent("")
-
 	m.resultsErr = nil
-
-	return m, tea.Batch(cmds...)
+	m.query, cmd = m.query.Update("")
+	return m, cmd
 }
 
 //nolint:revive
@@ -124,6 +116,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 		m.height = msg.Height
 
+		m.veiwport.Update(msg)
 		m.veiwport.Width = m.width - 4
 		switch m.state {
 		case listFields, header, selectOptions, search, chosenDocType, chosenDocTypeField:
@@ -132,7 +125,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.veiwport.Height = m.height - 5
 		}
 
+		m.docType.Update(msg)
+		m.field.Update(msg)
+
 		return m, nil
+
 	case tea.KeyMsg:
 		switch s := msg.String(); s {
 		// ctrl+c should exit the program from any state.
@@ -172,12 +169,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					return m.Clear()
 				case "enter":
 					m.state = chosenDocType
-					m.field.Placeholder = fmt.Sprintf(
-						"Type a field to search in %s...",
-						m.docType.SelectedItem(),
+					m.field = selectfromlist.New(
+						"Select a field...",
+						m.store.ListFields()[m.docType.SelectedItem()],
 					)
-					m.field.SetSuggestions(m.store.ListFields()[m.docType.SelectedItem()])
-					m.field.Focus()
 					return m, nil
 				default:
 					m.docType, cmd = m.docType.Update(msg)
@@ -192,7 +187,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.state = chosenDocTypeField
 					m.query.Placeholder = fmt.Sprintf(
 						"Type a value of %s in %s to search for...",
-						m.field.Value(),
+						m.field.SelectedItem(),
 						m.docType.SelectedItem(),
 					)
 					m.query.Focus()
@@ -209,7 +204,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case "enter":
 					resultDocs, err := m.store.Search(
 						m.docType.SelectedItem(),
-						m.field.Value(),
+						m.field.SelectedItem(),
 						m.query.Value(),
 					)
 					if err != nil {

@@ -1,4 +1,4 @@
-package doctypelist
+package selectfromlist
 
 // adapted from https://github.com/charmbracelet/bubbletea/tree/master/examples/list-simple
 
@@ -12,7 +12,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-const listHeight = 10
+const (
+	listHeight   = 10
+	defaultWidth = 80
+)
 
 var (
 	titleStyle        = lipgloss.NewStyle().MarginLeft(2)
@@ -51,18 +54,16 @@ type Model struct {
 	list list.Model
 }
 
-func New(listItems []string) Model {
+func New(title string, listItems []string) Model {
 	items := []list.Item{}
 	for _, listItem := range listItems {
 		items = append(items, item(listItem))
 	}
 
-	const defaultWidth = 80
-
 	l := list.New(items, itemDelegate{}, defaultWidth, listHeight)
-	l.Title = "Select a document type..."
+	l.Title = title
 	l.SetShowStatusBar(false)
-	l.SetFilteringEnabled(false)
+	l.SetFilteringEnabled(true)
 	l.Styles.Title = titleStyle
 	l.Styles.PaginationStyle = paginationStyle
 	l.Styles.HelpStyle = helpStyle
@@ -79,6 +80,14 @@ func (m Model) SelectedItem() string {
 		return string(i)
 	}
 	return ""
+}
+
+func (m Model) SetItems(itemStrings []string) {
+	items := make([]list.Item, 0, len(itemStrings))
+	for _, s := range itemStrings {
+		items = append(items, item(s))
+	}
+	m.list.SetItems(items)
 }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
