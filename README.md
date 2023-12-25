@@ -10,9 +10,12 @@ If your `PATH` includes `$GOPATH/bin` or `$GOBIN`, then you should be run the pr
 ```shell
 zs
 ```
+see the Usage section below on how point it to the data.
 
-Alternatively, you may checkout the source, `cd` into the checkout directory and run
+Alternatively, you may clone the repo and run it with Go:
 ```shell
+git clone https://github.com/compressbronze/zs
+cd zs
 go run .
 ```
 
@@ -34,7 +37,7 @@ Flags:
 ```
 This launches a terminal user interface (tui) that explains the available features.
 
-If you run the program as a binary, you will most likely need to set the data directory that contains JSON files to search. The files `organaization.json`, `tickets.json`, and `users.json` MUST be present in that directory.
+The files `organaization.json`, `tickets.json`, and `users.json` MUST be present in that data directory.
 
 # Demo
 <img width="1200" src="./demo/demo.gif" />
@@ -57,7 +60,10 @@ The second implementation, `InvertedStore`, augments this with an inverted index
 Thus, given a document type, a field and a word, all the documents that match are returned in constant time, provided the data had been preprocessed to build the index.
 
 There is a difference between the results returned by each implementation because the `HashStore` only supports matching the entire value of a field, while the `InvertedStore` matches any word.
-Because of this, the `HashStore` has been deprecated and it tests have been skipped.
+I've assumed that typically, users will be either be searching fields that have short, relatively unique values, like a `name`, or have long blob of text that they only want to search one word in, like a `description`. Thus, querying a single word to get all documents that contain that word is appropriate.
+We could extend this to support entering multiple words into the query and combining the results relatively easily, but I have not done so at this stage.
+
+Because it will fail some tests designed for the `InvertedStore`, the `HashStore` has been deprecated and its tests have been skipped.
 
 Because each document type requires its own store, some duplication is required to add a new document type store.
 Perhaps generics could have been used to avoid such duplication, but it did not seem straightforward to implement.
