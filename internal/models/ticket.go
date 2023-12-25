@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/elliotchance/orderedmap/v2"
 	"github.com/google/uuid"
 )
 
@@ -27,21 +28,21 @@ type Ticket struct {
 	Via            string    `json:"via"`
 }
 
-func (t *Ticket) Fields() map[string]bool {
+func (t *Ticket) Fields() *orderedmap.OrderedMap[string, bool] {
 	if t == nil {
 		t = &Ticket{}
 	}
 	ty := reflect.TypeOf(*t)
-	fields := make(map[string]bool, ty.NumField())
+	fields := orderedmap.NewOrderedMap[string, bool]()
 	for i := 0; i < ty.NumField(); i++ {
 		parts := strings.SplitN(ty.Field(i).Tag.Get("json"), ",", 2)
 		switch parts[0] {
 		case "-":
 			continue
 		case "":
-			fields[ty.Field(i).Name] = true
+			fields.Set(ty.Field(i).Name, true)
 		default:
-			fields[parts[0]] = true
+			fields.Set(parts[0], true)
 		}
 	}
 	return fields
@@ -59,7 +60,7 @@ func (t *Ticket) ValueAt(field string) (any, error) {
 	if t == nil {
 		t = &Ticket{}
 	}
-	if _, exists := t.Fields()[field]; !exists {
+	if !t.Fields().GetOrDefault(field, false) {
 		return nil, fmt.Errorf("%w: %s", ErrFieldNotFound, field)
 	}
 	return t.UnsafeValueAt(field), nil

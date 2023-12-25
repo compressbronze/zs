@@ -24,7 +24,7 @@ func (TicketStore) ListFields() []string {
 }
 
 func (s TicketStore) Search(field, query string) ([]models.Ticket, error) {
-	if new(models.Ticket).Fields()[field] {
+	if !new(models.Ticket).Fields().GetOrDefault(field, false) {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidField, field)
 	}
 

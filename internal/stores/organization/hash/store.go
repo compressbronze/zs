@@ -24,7 +24,7 @@ func (OrganizationStore) ListFields() []string {
 }
 
 func (s OrganizationStore) Search(field, query string) ([]models.Organization, error) {
-	if new(models.Ticket).Fields()[field] {
+	if !new(models.Ticket).Fields().GetOrDefault(field, false) {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidField, field)
 	}
 

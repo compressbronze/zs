@@ -3,9 +3,18 @@ package models_test
 import (
 	"testing"
 
+	"github.com/elliotchance/orderedmap/v2"
 	"github.com/satrap-illustrations/zs/internal/models"
 	"gotest.tools/v3/assert"
 )
+
+func toMap(o *orderedmap.OrderedMap[string, bool]) map[string]bool {
+	m := make(map[string]bool)
+	for _, k := range o.Keys() {
+		m[k] = true
+	}
+	return m
+}
 
 func TestFields(t *testing.T) {
 	t.Parallel()
@@ -145,7 +154,7 @@ func TestFields(t *testing.T) {
 			t.Parallel()
 
 			fields := tc.model.Fields()
-			assert.DeepEqual(t, tc.expectedFields, fields)
+			assert.DeepEqual(t, tc.expectedFields, toMap(fields))
 		})
 	}
 }

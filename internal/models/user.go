@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/elliotchance/orderedmap/v2"
 	"github.com/google/uuid"
 )
 
@@ -30,21 +31,21 @@ type User struct {
 	Role           string    `json:"role"`
 }
 
-func (u *User) Fields() map[string]bool {
+func (u *User) Fields() *orderedmap.OrderedMap[string, bool] {
 	if u == nil {
 		u = &User{}
 	}
 	ty := reflect.TypeOf(*u)
-	fields := make(map[string]bool, ty.NumField())
+	fields := orderedmap.NewOrderedMap[string, bool]()
 	for i := 0; i < ty.NumField(); i++ {
 		parts := strings.SplitN(ty.Field(i).Tag.Get("json"), ",", 2)
 		switch parts[0] {
 		case "-":
 			continue
 		case "":
-			fields[ty.Field(i).Name] = true
+			fields.Set(ty.Field(i).Name, true)
 		default:
-			fields[parts[0]] = true
+			fields.Set(parts[0], true)
 		}
 	}
 	return fields
@@ -62,7 +63,7 @@ func (u *User) ValueAt(field string) (any, error) {
 	if u == nil {
 		u = &User{}
 	}
-	if _, exists := u.Fields()[field]; !exists {
+	if !u.Fields().GetOrDefault(field, false) {
 		return nil, fmt.Errorf("%w: %s", ErrFieldNotFound, field)
 	}
 	return u.UnsafeValueAt(field), nil
