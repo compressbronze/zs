@@ -13,10 +13,13 @@ import (
 	"github.com/spf13/viper"
 )
 
-var cfgFile string
-
 func Execute() error {
-	cobra.OnInitialize(initConfig)
+	var (
+		cfgFile string
+		dataDir string
+	)
+
+	cobra.OnInitialize(func() { initConfig(cfgFile) })
 
 	rootCmd := &cobra.Command{
 		Version: "v0.0.1",
@@ -26,22 +29,28 @@ func Execute() error {
 
 It searches Zendesk.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			store := implementations.NewHashStore("./data")
+			store, err := implementations.NewHashStore(dataDir)
+			if err != nil {
+				return err
+			}
+
 			p := tea.NewProgram(tui.InitialModel(store))
 			if _, err := p.Run(); err != nil {
 				return err
 			}
+
 			return nil
 		},
 	}
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/config/zs/config.yaml)")
+	rootCmd.Flags().StringVarP(&dataDir, "data-dir", "d", "./data", "data directory")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "verbose output")
 
 	return rootCmd.ExecuteContext(context.Background())
 }
 
-func initConfig() {
+func initConfig(cfgFile string) {
 	if cfgFile != "" {
 		viper.SetConfigFile(cfgFile)
 	} else {

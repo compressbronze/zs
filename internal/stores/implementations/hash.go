@@ -1,7 +1,11 @@
 package implementations
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/satrap-illustrations/zs/internal/models"
 	"github.com/satrap-illustrations/zs/internal/stores/organization"
@@ -20,16 +24,37 @@ type HashStore struct {
 	userStore         user.Store
 }
 
-func NewHashStore(path string) *HashStore {
+func readJSONFile(path string, v any) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	return json.NewDecoder(f).Decode(v)
+}
+
+func NewHashStore(path string) (*HashStore, error) {
 	organizations := []models.Organization{}
+	if err := readJSONFile(filepath.Join(path, "organizations.json"), &organizations); err != nil {
+		return nil, fmt.Errorf("failed to read organizations.json: %w", err)
+	}
+
 	tickets := []models.Ticket{}
+	if err := readJSONFile(filepath.Join(path, "tickets.json"), &tickets); err != nil {
+		return nil, fmt.Errorf("failed to read tickets.json: %w", err)
+	}
+
 	users := []models.User{}
+	if err := readJSONFile(filepath.Join(path, "users.json"), &users); err != nil {
+		return nil, fmt.Errorf("failed to read users.json: %w", err)
+	}
 
 	return &HashStore{
 		organizationStore: organizationhash.NewOrganizationStore(organizations),
 		ticketStore:       tickethash.NewTicketStore(tickets),
 		userStore:         userhash.NewUserStore(users),
-	}
+	}, nil
 }
 
 func (h *HashStore) ListFields() map[string][]string {

@@ -16,29 +16,35 @@ const (
 	header state = iota
 	selectOptions
 	searchZendesk
-	searchZendeskChosenType
+	searchZendeskDocType
 	list
 )
 
 type model struct {
 	state         state
-	styles        *Styles
+	styles        *styles
 	width, height int
 	query         textinput.Model
+	docType       textinput.Model
 	store         stores.Store
 }
 
-type Styles struct {
-	BorderColor lipgloss.Color
-	InputField  lipgloss.Style
+type styles struct {
+	docTypeField lipgloss.Style
+	queryField   lipgloss.Style
 }
 
-func DefaultStyles() *Styles {
-	s := &Styles{}
-	s.BorderColor = lipgloss.Color("#a134eb")
-	s.InputField = lipgloss.
+func DefaultStyles() *styles {
+	s := &styles{}
+	s.docTypeField = lipgloss.
 		NewStyle().
-		BorderForeground(s.BorderColor).
+		BorderForeground(lipgloss.Color("#154733")).
+		BorderStyle(lipgloss.RoundedBorder()).
+		Padding(1).
+		Width(50)
+	s.queryField = lipgloss.
+		NewStyle().
+		BorderForeground(lipgloss.Color("#a134eb")).
 		BorderStyle(lipgloss.RoundedBorder()).
 		Padding(1).
 		Width(50)
@@ -47,13 +53,16 @@ func DefaultStyles() *Styles {
 
 func InitialModel(store stores.Store) model {
 	styles := DefaultStyles()
+	docType := textinput.New()
+	docType.Placeholder = "Input a document type to search..."
+
 	query := textinput.New()
 	query.Placeholder = "Input a word to search for..."
-	query.Focus()
 	return model{
-		styles: styles,
-		query:  query,
-		store:  store,
+		styles:  styles,
+		docType: docType,
+		query:   query,
+		store:   store,
 	}
 }
 
@@ -71,7 +80,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		newModel.height = msg.Height
 
 	case tea.KeyMsg:
-		switch msg.String() {
+		switch s := msg.String(); s {
 		// ctrl+c should exit the program from any state.
 		case "ctrl+c":
 			return newModel, tea.Quit
@@ -84,25 +93,29 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 				return newModel, nil
 			case selectOptions:
-				switch msg.String() {
+				switch s {
 				case "1":
 					newModel.state = searchZendesk
+					newModel.docType.Focus()
 				case "2":
 					newModel.state = list
 				}
 				return newModel, nil
 			case searchZendesk:
-				switch msg.String() {
+				switch s {
 				case "ctrl+d":
 					newModel.state = selectOptions
-					newModel.query, cmd = newModel.query.Update("")
+					newModel.docType, cmd = newModel.docType.Update("")
 					return newModel, cmd
 				case "enter":
+					newModel.state = searchZendeskDocType
+					newModel.query.Focus()
+					return newModel, nil
 				}
-				newModel.query, cmd = newModel.query.Update(msg)
+				newModel.docType, cmd = newModel.docType.Update(msg)
 				return newModel, cmd
-			case searchZendeskChosenType:
-				switch msg.String() {
+			case searchZendeskDocType:
+				switch s {
 				case "ctrl+d":
 					newModel.state = selectOptions
 					newModel.query, cmd = newModel.query.Update("")
@@ -112,16 +125,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				newModel.query, cmd = newModel.query.Update(msg)
 				return newModel, cmd
 			case list:
-				switch msg.String() {
-				case "ctrl+d":
-					newModel.state = selectOptions
-					newModel.query, cmd = newModel.query.Update("")
-					return newModel, cmd
-				case "enter":
+				if s == "enter" {
 					newModel.state = selectOptions
 					return newModel, cmd
 				}
-				newModel.query, cmd = newModel.query.Update(msg)
 				return newModel, cmd
 			}
 		}
@@ -169,8 +176,6 @@ Select search options:
 2) View a list of searchable fields
 `
 
-	headerText = fmt.Sprintf("%d\n%s", m.state, headerText)
-
 	switch m.state {
 	case header:
 		return headerText
@@ -185,15 +190,15 @@ Select search options:
 			lipgloss.Left,
 			headerText,
 			searchText,
-			m.styles.InputField.Render(m.query.View()),
+			m.styles.docTypeField.Render(m.docType.View()),
 			"",
 		)
-	case searchZendeskChosenType:
+	case searchZendeskDocType:
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
 			headerText,
 			searchText,
-			m.styles.InputField.Render(m.query.View()),
+			m.styles.queryField.Render(m.query.View()),
 			"",
 		)
 	case list:
