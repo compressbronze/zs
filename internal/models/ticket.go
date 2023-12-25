@@ -28,42 +28,44 @@ type Ticket struct {
 	Via            string    `json:"via"`
 }
 
-func (t *Ticket) Fields() *orderedmap.OrderedMap[string, bool] {
+func (t *Ticket) Fields() *orderedmap.OrderedMap[string, int] {
 	if t == nil {
 		t = &Ticket{}
 	}
 	ty := reflect.TypeOf(*t)
-	fields := orderedmap.NewOrderedMap[string, bool]()
+	fields := orderedmap.NewOrderedMap[string, int]()
 	for i := 0; i < ty.NumField(); i++ {
 		parts := strings.SplitN(ty.Field(i).Tag.Get("json"), ",", 2)
 		switch parts[0] {
 		case "-":
 			continue
 		case "":
-			fields.Set(ty.Field(i).Name, true)
+			fields.Set(ty.Field(i).Name, i)
 		default:
-			fields.Set(parts[0], true)
+			fields.Set(parts[0], i)
 		}
 	}
 	return fields
 }
 
-func (t *Ticket) UnsafeValueAt(field string) any {
+func (t *Ticket) ValueAtIdx(i int) any {
 	if t == nil {
 		t = &Ticket{}
 	}
 	reflectedValue := reflect.ValueOf(*t)
-	return reflect.Indirect(reflectedValue).FieldByName(field)
+	return reflect.Indirect(reflectedValue).Field(i).Interface()
 }
 
 func (t *Ticket) ValueAt(field string) (any, error) {
 	if t == nil {
 		t = &Ticket{}
 	}
-	if !t.Fields().GetOrDefault(field, false) {
-		return nil, fmt.Errorf("%w: %s", ErrFieldNotFound, field)
+	// sign, it is O(k) were k is the number of fields in the struct
+	// we may be able to cache this in a store, but let's live with this for now
+	if i, exists := t.Fields().Get(field); exists {
+		return t.ValueAtIdx(i), nil
 	}
-	return t.UnsafeValueAt(field), nil
+	return nil, fmt.Errorf("%w: %s", ErrFieldNotFound, field)
 }
 
 func (t *Ticket) String() (string, error) {

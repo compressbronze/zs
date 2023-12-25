@@ -21,42 +21,44 @@ type Organization struct {
 	Tags          []string  `json:"tags"`
 }
 
-func (o *Organization) Fields() *orderedmap.OrderedMap[string, bool] {
+func (o *Organization) Fields() *orderedmap.OrderedMap[string, int] {
 	if o == nil {
 		o = &Organization{}
 	}
 	ty := reflect.TypeOf(*o)
-	fields := orderedmap.NewOrderedMap[string, bool]()
+	fields := orderedmap.NewOrderedMap[string, int]()
 	for i := 0; i < ty.NumField(); i++ {
 		parts := strings.SplitN(ty.Field(i).Tag.Get("json"), ",", 2)
 		switch parts[0] {
 		case "-":
 			continue
 		case "":
-			fields.Set(ty.Field(i).Name, true)
+			fields.Set(ty.Field(i).Name, i)
 		default:
-			fields.Set(parts[0], true)
+			fields.Set(parts[0], i)
 		}
 	}
 	return fields
 }
 
-func (o *Organization) UnsafeValueAt(field string) any {
+func (o *Organization) ValueAtIdx(i int) any {
 	if o == nil {
 		o = &Organization{}
 	}
 	reflectedValue := reflect.ValueOf(*o)
-	return reflect.Indirect(reflectedValue).FieldByName(field)
+	return reflect.Indirect(reflectedValue).Field(i).Interface()
 }
 
 func (o *Organization) ValueAt(field string) (any, error) {
 	if o == nil {
 		o = &Organization{}
 	}
-	if !o.Fields().GetOrDefault(field, false) {
-		return nil, fmt.Errorf("%w: %s", ErrFieldNotFound, field)
+	// sign, it is O(k) were k is the number of fields in the struct
+	// we may be able to cache this in a store, but let's live with this for now
+	if i, exists := o.Fields().Get(field); exists {
+		return o.ValueAtIdx(i), nil
 	}
-	return o.UnsafeValueAt(field), nil
+	return nil, fmt.Errorf("%w: %s", ErrFieldNotFound, field)
 }
 
 func (o *Organization) String() (string, error) {

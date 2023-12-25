@@ -24,7 +24,8 @@ func (OrganizationStore) ListFields() []string {
 }
 
 func (s OrganizationStore) Search(field, query string) ([]models.Organization, error) {
-	if !new(models.Ticket).Fields().GetOrDefault(field, false) {
+	i, exists := new(models.Ticket).Fields().Get(field)
+	if !exists {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidField, field)
 	}
 
@@ -41,7 +42,7 @@ func (s OrganizationStore) Search(field, query string) ([]models.Organization, e
 
 	out := []models.Organization{}
 	for _, organization := range s {
-		if organization.UnsafeValueAt(field) == query {
+		if organization.ValueAtIdx(i) == query {
 			out = append(out, organization)
 		}
 	}

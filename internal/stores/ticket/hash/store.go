@@ -24,7 +24,8 @@ func (TicketStore) ListFields() []string {
 }
 
 func (s TicketStore) Search(field, query string) ([]models.Ticket, error) {
-	if !new(models.Ticket).Fields().GetOrDefault(field, false) {
+	i, exists := new(models.Ticket).Fields().Get(field)
+	if !exists {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidField, field)
 	}
 
@@ -41,7 +42,7 @@ func (s TicketStore) Search(field, query string) ([]models.Ticket, error) {
 
 	out := []models.Ticket{}
 	for _, ticket := range s {
-		if ticket.UnsafeValueAt(field) == query {
+		if ticket.ValueAtIdx(i) == query {
 			out = append(out, ticket)
 		}
 	}

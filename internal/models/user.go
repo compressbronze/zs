@@ -31,42 +31,44 @@ type User struct {
 	Role           string    `json:"role"`
 }
 
-func (u *User) Fields() *orderedmap.OrderedMap[string, bool] {
+func (u *User) Fields() *orderedmap.OrderedMap[string, int] {
 	if u == nil {
 		u = &User{}
 	}
 	ty := reflect.TypeOf(*u)
-	fields := orderedmap.NewOrderedMap[string, bool]()
+	fields := orderedmap.NewOrderedMap[string, int]()
 	for i := 0; i < ty.NumField(); i++ {
 		parts := strings.SplitN(ty.Field(i).Tag.Get("json"), ",", 2)
 		switch parts[0] {
 		case "-":
 			continue
 		case "":
-			fields.Set(ty.Field(i).Name, true)
+			fields.Set(ty.Field(i).Name, i)
 		default:
-			fields.Set(parts[0], true)
+			fields.Set(parts[0], i)
 		}
 	}
 	return fields
 }
 
-func (u *User) UnsafeValueAt(field string) any {
+func (u *User) ValueAtIdx(i int) any {
 	if u == nil {
 		u = &User{}
 	}
 	reflectedValue := reflect.ValueOf(*u)
-	return reflect.Indirect(reflectedValue).FieldByName(field)
+	return reflect.Indirect(reflectedValue).Field(i).Interface()
 }
 
 func (u *User) ValueAt(field string) (any, error) {
 	if u == nil {
 		u = &User{}
 	}
-	if !u.Fields().GetOrDefault(field, false) {
-		return nil, fmt.Errorf("%w: %s", ErrFieldNotFound, field)
+	// sign, it is O(k) were k is the number of fields in the struct
+	// we may be able to cache this in a store, but let's live with this for now
+	if i, exists := u.Fields().Get(field); exists {
+		return u.ValueAtIdx(i), nil
 	}
-	return u.UnsafeValueAt(field), nil
+	return nil, fmt.Errorf("%w: %s", ErrFieldNotFound, field)
 }
 
 func (u *User) String() (string, error) {

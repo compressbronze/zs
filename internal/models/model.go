@@ -11,12 +11,11 @@ import (
 var ErrFieldNotFound = fmt.Errorf("field not found")
 
 type Model interface {
-	// Fields returns a set of the fields in the Model.
-	Fields() *orderedmap.OrderedMap[string, bool]
+	// Fields returns a the fields in the Model mapped to to an index.
+	Fields() *orderedmap.OrderedMap[string, int]
 
-	// UnsafeValueAt returns the value of the field in the Model.
-	// It may panic if the field does not exist.
-	UnsafeValueAt(field string) any
+	// ValueAtIdx returns the value of the field in the Model at i.
+	ValueAtIdx(i int) any
 
 	// ValueAt returns the value of the field in the Model.
 	// It returns ErrFieldNotFound if the field does not exist.
@@ -26,13 +25,15 @@ type Model interface {
 // StringOf returns a string representation of the Model.
 func StringOf(t Model) (string, error) {
 	var out strings.Builder
-	for _, field := range t.Fields().Keys() {
-		value := t.UnsafeValueAt(field)
+	m := t.Fields()
+	for el := m.Front(); el != nil; el = el.Next() {
+		fmt.Println(el.Key, el.Value)
+		value := t.ValueAtIdx(el.Value)
 		buf, err := json.Marshal(value)
 		if err != nil {
 			return "", fmt.Errorf("failed to marshal value: %w", err)
 		}
-		_, _ = fmt.Fprintf(&out, "%20s%s\n", field, buf)
+		_, _ = fmt.Fprintf(&out, "%20s%s\n", el.Key, buf)
 	}
 	return out.String(), nil
 }
