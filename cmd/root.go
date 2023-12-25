@@ -7,6 +7,7 @@ import (
 	"github.com/adrg/xdg"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/log"
+	"github.com/satrap-illustrations/zs/internal/stores/implementations"
 	"github.com/satrap-illustrations/zs/internal/tui"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -25,7 +26,8 @@ func Execute() error {
 
 It searches Zendesk.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			p := tea.NewProgram(tui.InitialModel())
+			store := implementations.NewHashStore("./data")
+			p := tea.NewProgram(tui.InitialModel(store))
 			if _, err := p.Run(); err != nil {
 				return err
 			}

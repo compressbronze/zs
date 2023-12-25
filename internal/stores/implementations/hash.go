@@ -16,17 +16,17 @@ var ErrInvalidDocType = errors.New("invalid document type")
 
 type HashStore struct {
 	organizationStore organization.Store
-	userStore         user.Store
 	ticketStore       ticket.Store
+	userStore         user.Store
 }
 
 func NewHashStore(path string) *HashStore {
-	orgs := []models.Organization{}
+	organizations := []models.Organization{}
 	tickets := []models.Ticket{}
 	users := []models.User{}
 
 	return &HashStore{
-		organizationStore: organizationhash.NewOrganizationStore(orgs),
+		organizationStore: organizationhash.NewOrganizationStore(organizations),
 		ticketStore:       tickethash.NewTicketStore(tickets),
 		userStore:         userhash.NewUserStore(users),
 	}
@@ -35,23 +35,23 @@ func NewHashStore(path string) *HashStore {
 func (h *HashStore) ListFields() map[string][]string {
 	return map[string][]string{
 		"organizations": h.organizationStore.ListFields(),
-		"users":         h.userStore.ListFields(),
 		"tickets":       h.ticketStore.ListFields(),
+		"users":         h.userStore.ListFields(),
 	}
 }
 
 func (h *HashStore) Search(doctype, field, query string) ([]models.Model, error) {
 	switch doctype {
 	case "organizations":
-		orgs, err := h.organizationStore.Search(field, query)
-		return []models.Model(orgs), err
-	case "users":
-		return h.userStore.Search(field, query)
+		organizations, err := h.organizationStore.Search(field, query)
+		return models.OrganizationSliceToModelsSlice(organizations), err
 	case "tickets":
-		return h.ticketStore.Search(field, query)
+		tickets, err := h.ticketStore.Search(field, query)
+		return models.TicketSliceToModelsSlice(tickets), err
+	case "users":
+		users, err := h.userStore.Search(field, query)
+		return models.UserSliceToModelsSlice(users), err
 	default:
 		return nil, ErrInvalidDocType
 	}
-
-	return nil, nil
 }

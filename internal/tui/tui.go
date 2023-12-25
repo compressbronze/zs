@@ -2,10 +2,12 @@ package tui
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/satrap-illustrations/zs/internal/stores"
 )
 
 type state int
@@ -23,6 +25,7 @@ type model struct {
 	styles        *Styles
 	width, height int
 	query         textinput.Model
+	store         stores.Store
 }
 
 type Styles struct {
@@ -42,7 +45,7 @@ func DefaultStyles() *Styles {
 	return s
 }
 
-func InitialModel() model {
+func InitialModel(store stores.Store) model {
 	styles := DefaultStyles()
 	query := textinput.New()
 	query.Placeholder = "Input a word to search for..."
@@ -50,6 +53,7 @@ func InitialModel() model {
 	return model{
 		styles: styles,
 		query:  query,
+		store:  store,
 	}
 }
 
@@ -114,6 +118,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					newModel.query, cmd = newModel.query.Update("")
 					return newModel, cmd
 				case "enter":
+					newModel.state = selectOptions
+					return newModel, cmd
 				}
 				newModel.query, cmd = newModel.query.Update(msg)
 				return newModel, cmd
@@ -193,12 +199,21 @@ Select search options:
 	case list:
 		return lipgloss.JoinVertical(
 			lipgloss.Left,
-			headerText,
-			searchText,
-			m.styles.InputField.Render(m.query.View()),
-			"",
+			"Press 'enter' to go back to the main menu.",
+			formatFieldsList(m.store.ListFields(), m.width),
 		)
 	default:
 		return "Unknown state"
 	}
+}
+
+func formatFieldsList(fieldsMap map[string][]string, width int) string {
+	var out strings.Builder
+	for docType, fields := range fieldsMap {
+		_, _ = fmt.Fprintf(&out, "Search %s with:\n", docType)
+		_, _ = fmt.Fprintf(&out, "%s\n", strings.Repeat("-", width))
+		_, _ = fmt.Fprintf(&out, "%s\n", strings.Join(fields, "\n"))
+		_, _ = fmt.Fprintln(&out, "")
+	}
+	return out.String()
 }
