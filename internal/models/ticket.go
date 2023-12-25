@@ -71,3 +71,13 @@ func (t *Ticket) String() (string, error) {
 	}
 	return StringOf(t)
 }
+
+// TicketSliceToModelsSlice converts a slice of Ticket to a slice of Model.
+func TicketSliceToModelsSlice(in []Ticket) []Model {
+	out := make([]Model, 0, len(in))
+	for _, v := range in {
+		v := v
+		out = append(out, &v)
+	}
+	return out
+}

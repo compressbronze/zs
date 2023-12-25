@@ -64,3 +64,13 @@ func (o *Organization) String() (string, error) {
 	}
 	return StringOf(o)
 }
+
+// OrganizationSliceToModelsSlice converts a slice of Organization to a slice of Model.
+func OrganizationSliceToModelsSlice(in []Organization) []Model {
+	out := make([]Model, 0, len(in))
+	for _, v := range in {
+		v := v
+		out = append(out, &v)
+	}
+	return out
+}

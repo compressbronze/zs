@@ -72,3 +72,13 @@ func (u *User) String() (string, error) {
 	}
 	return StringOf(u)
 }
+
+// UserSliceToModelsSlice converts a slice of User to a slice of Model.
+func UserSliceToModelsSlice(in []User) []Model {
+	out := make([]Model, 0, len(in))
+	for _, v := range in {
+		v := v
+		out = append(out, &v)
+	}
+	return out
+}
