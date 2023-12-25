@@ -115,14 +115,15 @@ func TestStores(t *testing.T) {
 		hashStore, err := implementations.NewHashStore("../../data")
 		assert.NilError(t, err)
 
+		invStore, err := implementations.NewInvertedStore("../../data")
+		assert.NilError(t, err)
+
 		for _, ts := range []struct {
 			name  string
 			store stores.Store
 		}{
-			{
-				name:  "HashStore",
-				store: hashStore,
-			},
+			{name: "HashStore", store: hashStore},
+			{name: "InvertedStore", store: invStore},
 		} {
 			ts := ts
 

@@ -6,24 +6,24 @@ import (
 
 	"github.com/satrap-illustrations/zs/internal/models"
 	"github.com/satrap-illustrations/zs/internal/stores/organization"
-	organizationhash "github.com/satrap-illustrations/zs/internal/stores/organization/hash"
+	organizationinverted "github.com/satrap-illustrations/zs/internal/stores/organization/inverted"
 	"github.com/satrap-illustrations/zs/internal/stores/ticket"
-	tickethash "github.com/satrap-illustrations/zs/internal/stores/ticket/hash"
+	ticketinverted "github.com/satrap-illustrations/zs/internal/stores/ticket/inverted"
 	"github.com/satrap-illustrations/zs/internal/stores/user"
-	userhash "github.com/satrap-illustrations/zs/internal/stores/user/hash"
+	userinverted "github.com/satrap-illustrations/zs/internal/stores/user/inverted"
 )
 
-type HashStore struct {
+type InvertedStore struct {
 	organizationStore organization.Store
 	ticketStore       ticket.Store
 	userStore         user.Store
 }
 
-func (*HashStore) ListDocumentTypes() []string {
+func (*InvertedStore) ListDocumentTypes() []string {
 	return []string{"Organizations", "Tickets", "Users"}
 }
 
-func NewHashStore(path string) (*HashStore, error) {
+func NewInvertedStore(path string) (*InvertedStore, error) {
 	organizations := []models.Organization{}
 	if err := readJSONFile(filepath.Join(path, "organizations.json"), &organizations); err != nil {
 		return nil, fmt.Errorf("failed to read organizations.json: %w", err)
@@ -39,14 +39,14 @@ func NewHashStore(path string) (*HashStore, error) {
 		return nil, fmt.Errorf("failed to read users.json: %w", err)
 	}
 
-	return &HashStore{
-		organizationStore: organizationhash.NewOrganizationStore(organizations),
-		ticketStore:       tickethash.NewTicketStore(tickets),
-		userStore:         userhash.NewUserStore(users),
+	return &InvertedStore{
+		organizationStore: organizationinverted.NewOrganizationStore(organizations),
+		ticketStore:       ticketinverted.NewTicketStore(tickets),
+		userStore:         userinverted.NewUserStore(users),
 	}, nil
 }
 
-func (h *HashStore) ListFields() map[string][]string {
+func (h *InvertedStore) ListFields() map[string][]string {
 	return map[string][]string{
 		"organizations": h.organizationStore.ListFields(),
 		"tickets":       h.ticketStore.ListFields(),
@@ -54,7 +54,7 @@ func (h *HashStore) ListFields() map[string][]string {
 	}
 }
 
-func (h *HashStore) Search(doctype, field, query string) ([]models.Model, error) {
+func (h *InvertedStore) Search(doctype, field, query string) ([]models.Model, error) {
 	sameTypeModels := []models.Model{}
 	switch doctype {
 	case "Organizations":
@@ -81,7 +81,7 @@ func (h *HashStore) Search(doctype, field, query string) ([]models.Model, error)
 	return h.augmentWithRelatedDocuments(sameTypeModels)
 }
 
-func (h *HashStore) augmentWithRelatedDocuments(in []models.Model) ([]models.Model, error) {
+func (h *InvertedStore) augmentWithRelatedDocuments(in []models.Model) ([]models.Model, error) {
 	out := make([]models.Model, 0, len(in))
 	for _, m := range in {
 		out = append(out, m)
