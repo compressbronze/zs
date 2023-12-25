@@ -115,11 +115,11 @@ func (model) Init() tea.Cmd {
 
 func (m model) Clear() (model, tea.Cmd) {
 	var cmd tea.Cmd
-	m.docType.SetItems([]string{})
-	m.field.SetItems([]string{})
-	m.veiwport.SetContent("")
+	m.docType = selectfromlist.New("Select a document type...", m.store.ListDocumentTypes())
+	m.field = selectfromlist.New("Select a field...", []string{})
+	m.query = textinput.New()
+	m.veiwport = viewport.New(0, 0)
 	m.resultsErr = nil
-	m.query, cmd = m.query.Update("")
 	return m, cmd
 }
 
