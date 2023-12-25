@@ -102,9 +102,9 @@ func (model) Init() tea.Cmd {
 
 func (m model) Clear() (tea.Model, tea.Cmd) {
 	m.docType = doctypelist.New(m.store.ListDocumentTypes())
-	m.query = textinput.New()
-	m.query.ShowSuggestions = true
 	m.field = textinput.New()
+	m.field.ShowSuggestions = true
+	m.query = textinput.New()
 	m.veiwport = viewport.New(0, 0)
 	m.resultsErr = nil
 
