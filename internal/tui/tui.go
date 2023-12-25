@@ -96,15 +96,20 @@ func (model) Init() tea.Cmd {
 	return nil
 }
 
-func (m model) Clear() (tea.Model, tea.Cmd) {
-	m.docType = doctypelist.New(m.store.ListDocumentTypes())
-	m.field = textinput.New()
-	m.field.ShowSuggestions = true
-	m.query = textinput.New()
-	m.veiwport = viewport.New(0, 0)
+func (m model) Clear() (model, tea.Cmd) {
+	var cmd tea.Cmd
+	cmds := make([]tea.Cmd, 0, 4)
+	m.docType, cmd = m.docType.Update("")
+	cmds = append(cmds, cmd)
+	m.query, cmd = m.query.Update("")
+	cmds = append(cmds, cmd)
+	m.field, cmd = m.field.Update("")
+	cmds = append(cmds, cmd)
+	m.veiwport.SetContent("")
+
 	m.resultsErr = nil
 
-	return m, nil
+	return m, tea.Batch(cmds...)
 }
 
 //nolint:revive
@@ -148,7 +153,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.state = search
 				case "2":
 					m.state = listFields
-					m.Clear()
+					m, cmd = m.Clear()
+					if cmd != nil {
+						return m, cmd
+					}
 					m.veiwport.Width = m.width - 4
 					m.veiwport.Height = m.height - 4
 					m.veiwport.SetContent(formatFieldsList(m.store.ListFields(), m.veiwport.Width))
@@ -207,7 +215,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						return m, nil
 					}
 
-					m.Clear()
+					m, cmd = m.Clear()
+					if cmd != nil {
+						return m, cmd
+					}
 					m.veiwport.Width = m.width - 4
 					m.veiwport.Height = m.height - 5
 					formattedResults, err := formatResults(resultDocs, m.veiwport.Width)
