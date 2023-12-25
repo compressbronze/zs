@@ -26,7 +26,7 @@ Usage:
   zs [flags]
 
 Flags:
-      --config string     config file (default is $HOME/config/zs/config.yaml)
+      --config string     config file (default is $HOME/.config/zs/config.yaml)
   -d, --data-dir string   data directory (default "./data")
   -h, --help              help for zs
   -v, --verbose           verbose output

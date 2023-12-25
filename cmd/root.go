@@ -43,7 +43,7 @@ It searches Zendesk.`,
 		},
 	}
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/config/zs/config.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/zs/config.yaml)")
 	rootCmd.Flags().StringVarP(&dataDir, "data-dir", "d", "./data", "data directory")
 	rootCmd.PersistentFlags().BoolP("verbose", "v", false, "verbose output")
 
